@@ -1,16 +1,14 @@
-package pe.com.fabrizio.cajalima.auth.dto;
+package pe.com.fabrizio.cajalima.user.dto;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import jakarta.validation.constraints.*;
-import pe.com.fabrizio.cajalima.user.domain.UserRole;
 
-public record RegisterRequest(
+public record CreateUserRequest(
         @NotBlank @Size(max = 120) String name,
         @NotBlank @Email @Size(max = 180) String email,
-        @NotBlank @Size(min = 8, max = 72) String password,
-        @NotNull UserRole role) {
-    public RegisterRequest {
+        @NotBlank @Size(min = 8, max = 72) String password) {
+    public CreateUserRequest {
         name = name == null ? null : name.strip();
         email = email == null ? null : email.strip().toLowerCase(Locale.ROOT);
     }
@@ -21,5 +19,5 @@ public record RegisterRequest(
     }
 
     @Override
-    public String toString() { return "RegisterRequest[redacted]"; }
+    public String toString() { return "CreateUserRequest[redacted]"; }
 }

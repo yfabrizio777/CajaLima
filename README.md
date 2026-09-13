@@ -69,7 +69,7 @@ La seguridad forma parte de cómo queremos construir CajaLima desde el inicio. L
 
 Las contraseñas se almacenan mediante hash BCrypt y la autenticación de la API utiliza tokens JWT. Los datos de entrada se validan, las respuestas no incluyen contraseñas ni hashes y cada petición autenticada comprueba que la cuenta siga activa. La auditoría y los permisos específicos de cada operación se implementarán junto con las funciones del negocio.
 
-En esta primera versión, el registro es público y permite elegir `ADMIN` o `EMPLOYEE`. Cualquier visitante puede crear una cuenta administradora: antes de abrir el sistema a clientes habrá que restringir ese registro y la asignación de roles. Esta versión no incorpora todavía limitación de intentos de login. En despliegue, la API debe servirse mediante HTTPS.
+La configuración inicial permite crear un único administrador cuando todavía no hay usuarios. El servidor asigna el rol y cierra ese registro después; solo un administrador autenticado puede crear empleados. El cliente no puede enviar roles ni campos internos. Esta versión no incorpora todavía limitación de intentos de login. En despliegue, la API debe servirse mediante HTTPS; la configuración inicial debe completarse en un entorno controlado antes de exponerlo.
 
 ## Ejecutar localmente
 
@@ -116,7 +116,7 @@ Una respuesta `401` o `403` es válida en esta etapa: Spring Security protege la
 mvn clean test
 ```
 
-Las pruebas generan su propia clave JWT y revierten sus operaciones sobre usuarios. La API ofrece `POST /api/auth/register`, `POST /api/auth/login` y `GET /api/auth/me`; este último necesita `Authorization: Bearer <token>`. El login devuelve `expiresIn` en segundos. Los tokens se firman con HS256 y no se usan cookies ni sesiones HTTP para autenticar.
+Las pruebas generan su propia clave JWT y prueban usuarios en un esquema temporal aislado. La API ofrece `POST /api/auth/register` para configurar al primer administrador, `POST /api/auth/login` y `GET /api/auth/me`; este último necesita `Authorization: Bearer <token>`. `GET /api/auth/setup` indica únicamente si queda disponible la configuración inicial. `POST /api/users` permite a un administrador crear empleados. El login devuelve `expiresIn` en segundos. Los tokens se firman con HS256 y no se usan cookies ni sesiones HTTP para autenticar.
 
 En despliegue se usará la configuración privada de la plataforma mediante `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET` y `JWT_EXPIRATION`, sin activar el perfil `local`.
 

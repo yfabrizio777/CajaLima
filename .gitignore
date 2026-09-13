@@ -36,3 +36,8 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Local architecture and browser analysis
+graphify-out/
+.playwright-cli/
+strix_runs/

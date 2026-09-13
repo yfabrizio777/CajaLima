@@ -2,6 +2,10 @@ spring:
   application:
     name: cajalima
 
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
   docker:
     compose:
       enabled: false
