@@ -1,0 +1,38 @@
+# Environment variables
+.env
+.env.*
+
+# Local secrets and private keys
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp

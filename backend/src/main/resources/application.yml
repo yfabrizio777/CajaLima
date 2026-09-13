@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: cajalima
+
+  docker:
+    compose:
+      enabled: false
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${BACKEND_PORT:8080}
