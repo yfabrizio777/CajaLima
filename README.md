@@ -24,7 +24,7 @@ Para bodegas, barberías, cafeterías, minimarkets, pequeños restaurantes, empr
 
 Estas funciones están previstas y aún no están disponibles:
 
-- Crear usuarios con roles y permisos según su trabajo.
+- Definir permisos específicos para cada operación del negocio según el rol del usuario.
 - Organizar productos y consultar el stock disponible.
 - Registrar ventas y su medio de pago: efectivo, Yape, Plin o transferencia.
 - Guardar información de clientes.
@@ -33,11 +33,11 @@ Estas funciones están previstas y aún no están disponibles:
 
 ## Estado del proyecto
 
-CajaLima se encuentra actualmente en desarrollo. Ya están disponibles el backend inicial con Java 21 y Spring Boot, la base de datos PostgreSQL en Docker y una prueba automatizada de arranque con conexión a la base de datos.
+CajaLima se encuentra actualmente en desarrollo. Ya están disponibles el backend con Java 21 y Spring Boot, PostgreSQL en Docker, el registro de usuarios con roles `ADMIN` y `EMPLOYEE`, el inicio de sesión y las pruebas automatizadas de autenticación.
 
-Los cambios de la base de datos se administran con migraciones versionadas de Flyway. La primera crea la tabla de usuarios, todavía sin cuentas ni funciones de acceso.
+Los cambios de la base de datos se administran con migraciones versionadas de Flyway. La primera crea la tabla de usuarios, sin cuentas precargadas.
 
-Todavía no hay una interfaz para clientes ni funciones de ventas, inventario o gestión de usuarios. Spring Security protege las rutas del backend, pero el acceso con cuentas del negocio aún está pendiente.
+Todavía no hay una interfaz para clientes ni funciones de ventas o inventario. La API permite registrar una cuenta, iniciar sesión y consultar los datos del usuario autenticado.
 
 ## Arquitectura
 
@@ -67,7 +67,9 @@ Frontend futuro
 
 La seguridad forma parte de cómo queremos construir CajaLima desde el inicio. Los secretos se mantienen fuera del repositorio y la configuración privada se proporciona mediante variables de entorno. PostgreSQL solo se publica en la interfaz local del equipo.
 
-La autenticación de usuarios del negocio, la autorización por roles, la validación de datos, el almacenamiento de contraseñas mediante hash y la auditoría forman parte del trabajo previsto. Spring Security y las dependencias de validación ya están en la base técnica; eso no significa que todos esos controles estén terminados. Se irán implementando y comprobando junto con cada función.
+Las contraseñas se almacenan mediante hash BCrypt y la autenticación de la API utiliza tokens JWT. Los datos de entrada se validan, las respuestas no incluyen contraseñas ni hashes y cada petición autenticada comprueba que la cuenta siga activa. La auditoría y los permisos específicos de cada operación se implementarán junto con las funciones del negocio.
+
+En esta primera versión, el registro es público y permite elegir `ADMIN` o `EMPLOYEE`. Cualquier visitante puede crear una cuenta administradora: antes de abrir el sistema a clientes habrá que restringir ese registro y la asignación de roles. Esta versión no incorpora todavía limitación de intentos de login. En despliegue, la API debe servirse mediante HTTPS.
 
 ## Ejecutar localmente
 
@@ -80,7 +82,11 @@ POSTGRES_DB=cajalima
 POSTGRES_USER=tu_usuario_local
 POSTGRES_PASSWORD=tu_clave_local
 POSTGRES_PORT=5433
+JWT_SECRET=
+JWT_EXPIRATION=3600000
 ```
+
+Completa `JWT_SECRET` con un secreto aleatorio privado de al menos 32 bytes, generado con una herramienta segura. No uses una frase predecible. `JWT_EXPIRATION` se expresa en milisegundos (3600000 equivale a una hora); se admite entre un segundo y un día. El backend rechaza una clave ausente o demasiado corta.
 
 Si ya tienes un `.env` y una base de datos inicializada, conserva sus credenciales. Cambiar la contraseña en el archivo no cambia la del usuario dentro de PostgreSQL. Para contraseñas con `$` o `#`, usa comillas simples en `.env`. Las variables del proceso tienen prioridad sobre el archivo al ejecutar Compose.
 
@@ -89,13 +95,14 @@ Desde la raíz:
 ```powershell
 docker compose up -d postgres
 docker compose ps
-cd backend
-mvn spring-boot:run
+.\run-local.ps1
 ```
 
 PostgreSQL se publica en `127.0.0.1:5433` por defecto; usamos 5433 para evitar conflictos con instalaciones locales que ocupen 5432. El backend escucha en 8080.
 
-Maven activa el perfil `local`. La integración oficial de Spring Boot con Docker Compose obtiene la conexión del contenedor sin copiar credenciales a los archivos de la aplicación ni cargar variables a mano en cada terminal. Ejecuta Maven desde `backend`; en el IDE, usa ese directorio de trabajo y activa el mismo perfil.
+`run-local.ps1` usa el lector de `.env` de Compose, pasa únicamente las variables JWT al proceso y ejecuta `mvn spring-boot:run` desde `backend`. No imprime secretos y restaura las variables al terminar. Si Windows bloquea scripts locales, puedes invocarlo con `powershell -ExecutionPolicy RemoteSigned -File .\run-local.ps1`, sin cambiar la política permanente del equipo.
+
+Maven activa el perfil `local`. La integración oficial de Spring Boot con Docker Compose obtiene la conexión de PostgreSQL sin duplicar credenciales. También puedes ejecutar `mvn spring-boot:run` directamente desde `backend` si `JWT_SECRET` y `JWT_EXPIRATION` ya están definidos en su entorno. En el IDE, configura esas variables, usa `backend` como directorio de trabajo y activa el perfil `local`.
 
 Para comprobar el backend desde otra terminal:
 
@@ -109,7 +116,9 @@ Una respuesta `401` o `403` es válida en esta etapa: Spring Security protege la
 mvn clean test
 ```
 
-En despliegue se usará la configuración privada de la plataforma mediante `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` y `SPRING_DATASOURCE_PASSWORD`, sin activar el perfil `local`.
+Las pruebas generan su propia clave JWT y revierten sus operaciones sobre usuarios. La API ofrece `POST /api/auth/register`, `POST /api/auth/login` y `GET /api/auth/me`; este último necesita `Authorization: Bearer <token>`. El login devuelve `expiresIn` en segundos. Los tokens se firman con HS256 y no se usan cookies ni sesiones HTTP para autenticar.
+
+En despliegue se usará la configuración privada de la plataforma mediante `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET` y `JWT_EXPIRATION`, sin activar el perfil `local`.
 
 ## Detener el proyecto
 
@@ -127,8 +136,8 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] PostgreSQL con Docker
 - [x] Backend Spring Boot
 - [x] Migraciones Flyway
-- [ ] Usuarios y roles
-- [ ] Autenticación JWT
+- [x] Usuarios y roles
+- [x] Autenticación JWT
 - [ ] Productos
 - [ ] Ventas
 - [ ] Pagos

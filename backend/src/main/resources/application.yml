@@ -16,3 +16,9 @@ spring:
 
 server:
   port: ${BACKEND_PORT:8080}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    # Milliseconds; the login response's expiresIn is expressed in seconds.
+    expiration: ${JWT_EXPIRATION:3600000}
