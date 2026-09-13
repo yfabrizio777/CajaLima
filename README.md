@@ -35,6 +35,8 @@ Estas funciones están previstas y aún no están disponibles:
 
 CajaLima se encuentra actualmente en desarrollo. Ya están disponibles el backend inicial con Java 21 y Spring Boot, la base de datos PostgreSQL en Docker y una prueba automatizada de arranque con conexión a la base de datos.
 
+Los cambios de la base de datos se administran con migraciones versionadas de Flyway. La primera crea la tabla de usuarios, todavía sin cuentas ni funciones de acceso.
+
 Todavía no hay una interfaz para clientes ni funciones de ventas, inventario o gestión de usuarios. Spring Security protege las rutas del backend, pero el acceso con cuentas del negocio aún está pendiente.
 
 ## Arquitectura
@@ -57,7 +59,7 @@ Frontend futuro
 | Área | Tecnologías |
 | --- | --- |
 | Backend | Java 21, Spring Boot 4.1.1, Spring Security, Spring Data JPA y Maven |
-| Base de datos | PostgreSQL 17 |
+| Base de datos | PostgreSQL 17 y Flyway para las migraciones |
 | Infraestructura local | Docker y Docker Compose |
 | Próximamente | React, TypeScript, más pruebas automatizadas y CI/CD |
 
@@ -124,7 +126,7 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] Infraestructura inicial
 - [x] PostgreSQL con Docker
 - [x] Backend Spring Boot
-- [ ] Migraciones Flyway
+- [x] Migraciones Flyway
 - [ ] Usuarios y roles
 - [ ] Autenticación JWT
 - [ ] Productos
