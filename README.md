@@ -25,7 +25,6 @@ Para bodegas, barberías, cafeterías, minimarkets, pequeños restaurantes, empr
 Estas funciones están previstas y aún no están disponibles:
 
 - Definir permisos específicos para cada operación del negocio según el rol del usuario.
-- Organizar productos y consultar el stock disponible.
 - Registrar ventas y su medio de pago: efectivo, Yape, Plin o transferencia.
 - Guardar información de clientes.
 - Consultar un panel con ventas diarias y mensuales, productos más vendidos y ticket promedio, es decir, cuánto se vende en promedio por operación.
@@ -37,7 +36,7 @@ CajaLima se encuentra actualmente en desarrollo. Ya están disponibles el backen
 
 Los cambios de la base de datos se administran con migraciones versionadas de Flyway. La primera crea la tabla de usuarios, sin cuentas precargadas.
 
-El frontend permite configurar al primer administrador, iniciar sesión y acceder a un dashboard inicial sin datos de negocio. Ventas e inventario permanecen pendientes.
+El frontend permite configurar al primer administrador, iniciar sesión y acceder a un dashboard con el número real de productos activos y alertas de poco stock. Ventas permanece pendiente.
 
 ## Arquitectura
 
@@ -140,6 +139,12 @@ Para despliegue, compila con `npm run build` y sirve `frontend/dist` mediante HT
 
 Comprobaciones desde `frontend`: `npm run lint`, `npm run format:check`, `npm test` y `npm run build`. Consulta [el diseño y la arquitectura](docs/design-system.md), [los resultados y la reproducción de pruebas](docs/verification.md) y [los criterios de calidad](CONSTRAINTS.md).
 
+## Productos e inventario
+
+En `/app/products`, ADMIN puede crear y editar productos, cambiar su estado y ajustar stock con motivo. EMPLOYEE puede consultar y buscar, sin permisos de escritura. Hay búsqueda por nombre o SKU y filtros Todos, Poco stock e Inactivos, con paginación, tabla desktop y tarjetas móviles.
+
+V2 crea productos e historial de movimientos: precios decimales, SKU opcional único, stock no negativo y ajustes atómicos con usuario y motivo. El stock no se modifica desde la edición normal. El dashboard muestra productos activos y poco stock reales; ventas sigue pendiente. Consulta [el contrato y las decisiones del módulo](docs/products.md) y [la verificación](docs/verification.md).
+
 ## Detener el proyecto
 
 Presiona `Ctrl+C` en las terminales de Vite y Spring Boot. Después, desde la raíz:
@@ -158,10 +163,10 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] Migraciones Flyway
 - [x] Usuarios y roles
 - [x] Autenticación JWT
-- [ ] Productos
-- [ ] Ventas
+- [x] Productos e inventario
+- [ ] Ventas / POS
 - [ ] Métodos de pago
-- [ ] Dashboard con datos reales
+- [ ] Dashboard de ventas real
 - [x] Identidad visual / Design System
 - [x] Frontend base
 - [x] Login y configuración inicial

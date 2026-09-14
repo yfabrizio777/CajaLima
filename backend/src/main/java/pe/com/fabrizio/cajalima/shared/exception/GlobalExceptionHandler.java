@@ -17,7 +17,8 @@ public class GlobalExceptionHandler {
         return response(ex.getStatus(), ex.getMessage());
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
     ResponseEntity<ApiError> handleInvalidRequest(Exception ex) {
         return response(HttpStatus.BAD_REQUEST, "Revisa los datos enviados.");
     }
@@ -40,6 +41,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiError> handleUnexpected(Exception ex) {
         return response(HttpStatus.INTERNAL_SERVER_ERROR, "No pudimos procesar la solicitud.");
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    ResponseEntity<ApiError> handleIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        return response(HttpStatus.CONFLICT, "Los datos entran en conflicto con un registro existente.");
     }
 
     private ResponseEntity<ApiError> response(HttpStatus status, String message) {

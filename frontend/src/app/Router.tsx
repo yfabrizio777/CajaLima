@@ -5,6 +5,7 @@ import { useAuth } from '../features/auth/AuthContext'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { SetupPage } from '../features/auth/pages/SetupPage'
 import { DashboardPage } from '../features/home/DashboardPage'
+import { ProductsPage } from '../features/products/ProductsPage'
 import { NotFoundPage } from './NotFoundPage'
 
 function PrivateRoute() {
@@ -18,6 +19,7 @@ export function AppRouter() {
       '/setup': 'Configuremos CajaLima',
       '/login': 'Ingresar',
       '/app': 'Inicio',
+      '/app/products': 'Productos',
     }
     document.title = `${titles[pathname] || 'CajaLima'} · Tu negocio, más claro.`
     document.getElementById('main')?.focus()
@@ -31,6 +33,7 @@ export function AppRouter() {
       <Route element={<PrivateRoute />}>
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="products" element={<ProductsPage />} />
         </Route>
         <Route path="/app/*" element={<NotFoundPage />} />
       </Route>

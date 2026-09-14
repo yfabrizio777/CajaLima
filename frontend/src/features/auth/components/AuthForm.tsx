@@ -10,7 +10,13 @@ import { useAuth } from '../AuthContext'
 import { validate } from '../validation'
 import type { FormErrors, FormValues } from '../validation'
 
-export function AuthForm({ setup = false }: { setup?: boolean }) {
+export function AuthForm({
+  setup = false,
+  showSetup = false,
+}: {
+  setup?: boolean
+  showSetup?: boolean
+}) {
   const [values, setValues] = useState<FormValues>({
     name: '',
     email: '',
@@ -181,12 +187,14 @@ export function AuthForm({ setup = false }: { setup?: boolean }) {
           <Icon name="arrow" />
         </button>
       </form>
-      <p className="form-switch">
-        {setup ? '¿Ya tienes una cuenta?' : '¿Es tu primera vez por aquí?'}{' '}
-        <Link to={setup ? '/login' : '/setup'}>
-          {setup ? 'Inicia sesión' : 'Configurar CajaLima'}
-        </Link>
-      </p>
+      {(setup || showSetup) && (
+        <p className="form-switch">
+          {setup ? '¿Ya tienes una cuenta?' : '¿Es tu primera vez por aquí?'}{' '}
+          <Link to={setup ? '/login' : '/setup'}>
+            {setup ? 'Inicia sesión' : 'Configurar CajaLima'}
+          </Link>
+        </p>
+      )}
       <KusiNote>
         {setup
           ? 'Un gran negocio empieza con un primer paso. Vamos juntos.'
@@ -194,7 +202,7 @@ export function AuthForm({ setup = false }: { setup?: boolean }) {
       </KusiNote>
       <p className="auth-security">
         <Icon name="lock" />
-        Tu sesión se cierra al recargar o cerrar esta pestaña.
+        Por seguridad, deberás iniciar sesión nuevamente al recargar la página.
       </p>
     </div>
   )

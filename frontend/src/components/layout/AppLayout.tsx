@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, Outlet } from 'react-router'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../features/auth/AuthContext'
 import { formatDate } from '../../lib/locale'
 import { Brand } from '../ui/Brand'
@@ -8,7 +8,7 @@ import type { IconName } from '../ui/Icon'
 
 const modules: { name: string; icon: IconName }[] = [
   { name: 'Ventas', icon: 'bag' },
-  { name: 'Productos', icon: 'box' },
+
   { name: 'Clientes', icon: 'people' },
   { name: 'Gastos', icon: 'receipt' },
   { name: 'Reportes', icon: 'chart' },
@@ -17,15 +17,23 @@ const modules: { name: string; icon: IconName }[] = [
 function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav aria-label="Navegación principal" className="app-nav">
-      <Link
+      <NavLink
+        end
         to="/app"
-        aria-current="page"
-        className="nav-active"
+        className={({ isActive }) => (isActive ? 'nav-active' : 'nav-link')}
         onClick={onNavigate}
       >
         <Icon name="home" />
         <span>Inicio</span>
-      </Link>
+      </NavLink>
+      <NavLink
+        to="/app/products"
+        className={({ isActive }) => (isActive ? 'nav-active' : 'nav-link')}
+        onClick={onNavigate}
+      >
+        <Icon name="box" />
+        <span>Productos</span>
+      </NavLink>{' '}
       {modules.map((module) => (
         <div key={module.name} className="nav-future" aria-disabled="true">
           <Icon name={module.icon} />
@@ -39,6 +47,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppLayout() {
   const { user, signOut } = useAuth()
+  const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuButton = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -96,7 +105,10 @@ export function AppLayout() {
             <Brand />
           </div>
           <div className="breadcrumb">
-            Mi negocio <span>/</span> <strong>Inicio</strong>
+            Mi negocio <span>/</span>{' '}
+            <strong>
+              {pathname.startsWith('/app/products') ? 'Productos' : 'Inicio'}
+            </strong>
           </div>
           <div className="topbar-right">
             <span className="today">

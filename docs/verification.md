@@ -1,4 +1,49 @@
-# Verificación de Fase B
+# Verificación de CajaLima
+
+## Productos e inventario — 14/09/2026
+
+Base: `8bb530f`. Se conservan las pruebas anteriores; V1 no cambia y V2 ya aplicada no se reescribe.
+
+| Comprobación | Resultado |
+| --- | --- |
+| `mvn clean test` directo desde backend | 50 pruebas, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS |
+| Distribución backend | 25 anteriores + 25 de productos/inventario |
+| Concurrencia | Dos ajustes simultáneos conservan la cadena previous_stock/new_stock y el stock final |
+| `npm test` | 7 pruebas correctas |
+| `npm run lint`, `npm run build`, `npm run format:check` | Correctos |
+| `npm audit` | 0 vulnerabilidades reportadas |
+| Playwright CLI / Chromium | ADMIN crea, busca por nombre/SKU, edita, ajusta, desactiva/reactiva; EMPLOYEE consulta y busca, no puede crear/editar/ajustar |
+| Autorización real | Escrituras de EMPLOYEE rechazadas con 403 también por API |
+| Responsive / axe | Listado, nuevo producto y ajuste a 375×812, 768×1024 y 1366×768: 0 infracciones WCAG detectadas y sin overflow horizontal |
+| Dashboard | Número real de productos activos verificado; ventas pendiente |
+| JavaScript / almacenamiento | 0 errores inesperados; localStorage/sessionStorage vacíos y sin cookies de sesión |
+| Graphify | Frontend 108 nodos/299 aristas; backend 238 nodos/507 aristas; sin ciclos de imports en ambos |
+
+Revisión manual: DTOs explícitos y rechazo de campos desconocidos, autorización en servicios, datos del actor tomados del JWT validado, stock previo leído bajo bloqueo y stock nuevo validado. SQL parametrizado y constraints de integridad/uniqueness. No hay endpoint para falsificar o editar movimientos. La consulta por ID es compartida por los dos roles del mismo negocio; no hay multiempresa. Ningún secreto se añade al frontend. Los errores internos permanecen controlados.
+
+**Strix pendiente por entorno de autenticación.** `strix auth status` reconoce la suscripción; `STRIX_LLM` no existe en esta sesión. No se ejecutó pentest. Sigue siendo security gate obligatorio antes del despliegue público.
+
+Las tres capturas nuevas revisadas son `productos-desktop.png`, `producto-nuevo.png` y `productos-mobile.png`. Se conservan las capturas históricas de Fase B; no representan métricas actuales.
+
+### Entorno de navegador aislado
+
+Se usaron backend 8081, Vite 5174 y el esquema exclusivo `products_browser_20260913`, con cuentas y productos temporales. No se alteraron cuentas ni productos del esquema principal. Al finalizar se detuvieron las dos instancias de prueba y se eliminó únicamente ese esquema. PostgreSQL y las instancias habituales se conservaron.
+
+El flujo versionado es `frontend/tests/products-browser-flow.js`. Para reproducirlo, inicia un backend local con un esquema **nuevo y exclusivo de pruebas** configurado en `spring.flyway.schemas`, `spring.jpa.properties.hibernate.default_schema` y `spring.datasource.hikari.schema`; usa `BACKEND_PORT=8081`. Los secretos siguen procediendo de `run-local.ps1`, nunca del script del navegador. Inicia Vite con `VITE_PROXY_TARGET=http://127.0.0.1:8081` y `npm run dev -- --port 5174`.
+
+Desde la raíz, con esas instancias activas:
+
+```powershell
+playwright-cli.cmd open http://127.0.0.1:5174/login
+$flow = [IO.File]::ReadAllText((Join-Path (Get-Location) 'frontend/tests/products-browser-flow.js')).Replace('export default ', '')
+[IO.File]::WriteAllText((Join-Path (Get-Location) 'products-browser-flow.tmp'), $flow)
+playwright-cli.cmd --raw run-code --filename=products-browser-flow.tmp
+playwright-cli.cmd close
+```
+
+El flujo requiere setup disponible, genera credenciales aleatorias en memoria y sobrescribe las mismas tres capturas. No imprime tokens ni contraseñas. Al terminar, detén las instancias y elimina exclusivamente el esquema que creaste para esa ejecución. Nunca ejecutar limpieza sobre `public` ni borrar el volumen. Los esquemas de las pruebas Maven se generan y eliminan automáticamente.
+
+## Histórico: Fase B
 
 Fecha local: 13/09/2026. Base: `36bfac63b32196ff867805bb3d51a8d29f9edcc8`. No se modificaron archivos backend ni V1.
 

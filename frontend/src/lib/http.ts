@@ -22,8 +22,8 @@ if (
   throw new Error('Revisa la configuración pública de la API.')
 }
 
-interface RequestOptions {
-  method?: 'GET' | 'POST'
+export interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH'
   body?: unknown
   token?: string
   signal?: AbortSignal

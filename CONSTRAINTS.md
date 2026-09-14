@@ -17,3 +17,11 @@ Definidos para el alcance solicitado: configuración inicial, login, inicio vac�
 - No debilitar estos criterios para obtener un resultado verde. Una herramienta no disponible debe declararse como pendiente, nunca como aprobada.
 
 Comandos frontend desde `frontend/`; pruebas de navegador con Playwright CLI y axe descritas en `docs/verification.md`. Los resultados de Strix dependen de una sesión autenticada y un modelo disponible.
+
+## Productos e inventario
+
+- V2 nueva: precios BigDecimal y NUMERIC, stock no negativo y movimientos atómicos con autor y motivo.
+- ADMIN modifica; EMPLOYEE consulta. Probar todas las operaciones de escritura y campos desconocidos.
+- Listado paginado y búsqueda parametrizada. Ajustes concurrentes conservan la cadena de movimientos.
+- Hasta tres capturas nuevas para esta fase, según el alcance solicitado; conservar evidencia histórica útil.
+- Strix obligatorio antes del despliegue público; no atribuir resultados si falta configuración.

@@ -1,18 +1,59 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
+import { useProductsApi } from '../products/api'
+import type { ProductSummary } from '../products/types'
 import { KusiNote } from '../../components/ui/KusiNote'
 import { Storefront } from '../../components/ui/Storefront'
 import { Icon } from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { useAuth } from '../auth/AuthContext'
-import { formatMoney } from '../../lib/locale'
-
-const metrics: { title: string; value: string; icon: IconName }[] = [
-  { title: 'Ventas de hoy', value: formatMoney(0), icon: 'bag' },
-  { title: 'Productos', value: '0', icon: 'box' },
-  { title: 'Ventas registradas', value: '0', icon: 'receipt' },
-]
 
 export function DashboardPage() {
   const { user } = useAuth()
+  const api = useProductsApi()
+  const [summary, setSummary] = useState<ProductSummary | null>(null)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    const controller = new AbortController()
+    api
+      .summary(controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted) setSummary(value)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFailed(true)
+      })
+    return () => controller.abort()
+  }, [api])
+  const metrics: {
+    title: string
+    value: string
+    icon: IconName
+    foot: string
+  }[] = [
+    {
+      title: 'Ventas de hoy',
+      value: '—',
+      icon: 'bag',
+      foot: 'Módulo próximamente',
+    },
+    {
+      title: 'Productos',
+      value: summary ? String(summary.activeProducts) : '—',
+      icon: 'box',
+      foot: summary
+        ? `${summary.lowStockProducts} con poco stock · Productos activos`
+        : failed
+          ? 'No pudimos consultar. Revisa Productos.'
+          : 'Consultando productos…',
+    },
+    {
+      title: 'Ventas registradas',
+      value: '—',
+      icon: 'receipt',
+      foot: 'Módulo próximamente',
+    },
+  ]
   const name = user?.name.split(/\s+/)[0] || 'qué gusto verte'
   return (
     <>
@@ -32,15 +73,15 @@ export function DashboardPage() {
       </section>
       <div className="metrics-heading">
         <h2>Un vistazo a tu negocio</h2>
-        <span>Vista inicial · Sin datos de negocio</span>
+        <span>Productos reales · Ventas próximamente</span>
       </div>
       <section
         className="metrics-grid"
-        aria-label="Resumen inicial, módulos todavía no disponibles"
+        aria-label="Resumen de productos y módulos futuros"
       >
         {metrics.map((metric, index) => (
           <article
-            className={`metric-card ${index === 0 ? 'metric-featured' : ''}`}
+            className={`metric-card ${index === 1 ? 'metric-featured' : ''}`}
             key={metric.title}
           >
             <div className="metric-label">
@@ -50,7 +91,7 @@ export function DashboardPage() {
               </span>
             </div>
             <p className="metric-number">{metric.value}</p>
-            <span className="metric-foot">Módulo próximamente</span>
+            <span className="metric-foot">{metric.foot}</span>
           </article>
         ))}
       </section>
@@ -64,19 +105,19 @@ export function DashboardPage() {
             <Storefront />
             <h3>Todo listo para dar el primer paso.</h3>
             <p>
-              Pronto podrás agregar tus productos y registrar tus ventas.
+              Ya puedes organizar tus productos y sus existencias.
               <br className="desktop-break" /> Aquí encontrarás un resumen claro
-              de cada día.
+              de tus próximas ventas.
             </p>
-            <span className="future-pill">
+            <Link className="future-pill" to="/app/products">
               <Icon name="box" />
-              Productos y ventas · Próximamente
-            </span>
+              Ver productos
+            </Link>
           </div>
           <div className="empty-footer">
             <Icon name="info" />
             <span>
-              Este espacio aún no muestra operaciones ni importes reales.
+              Las ventas e importes de ventas aún no están disponibles.
             </span>
           </div>
         </section>
@@ -101,7 +142,7 @@ export function DashboardPage() {
                 <div>
                   <h3>Tus productos</h3>
                   <p>Un catálogo para tener todo a mano.</p>
-                  <small>Próximamente</small>
+                  <small>Disponible</small>
                 </div>
               </li>
               <li>
@@ -115,8 +156,8 @@ export function DashboardPage() {
             </ol>
           </section>
           <KusiNote>
-            Todo negocio empieza con la primera venta. Cuando agreguemos
-            productos, aquí verás cómo va tu día.
+            Revisa tus existencias antes de empezar el día. En Productos
+            encontrarás lo que necesita reposición.
           </KusiNote>
         </aside>
       </div>

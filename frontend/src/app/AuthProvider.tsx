@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import { AuthContext } from '../features/auth/AuthContext'
 import { currentUser, login } from '../features/auth/api'
 import type { Credentials, User } from '../features/auth/types'
+import { ApiError, request } from '../lib/http'
+import type { RequestOptions } from '../lib/http'
 
 interface Session {
   user: User
@@ -46,10 +48,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [session, signOut])
 
+  const authenticatedRequest = useCallback(
+    async (path: string, options: Omit<RequestOptions, 'token'> = {}) => {
+      if (!session || Date.now() >= session.expiresAt) {
+        signOut()
+        throw new ApiError(401, 'Ingresa nuevamente para continuar.')
+      }
+      try {
+        return await request(path, { ...options, token: session.token })
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) signOut()
+        throw error
+      }
+    },
+    [session, signOut],
+  )
+
   // The token never leaves this in-memory provider. Full reload intentionally ends the session.
   return (
     <AuthContext.Provider
-      value={{ user: session?.user ?? null, signIn, signOut }}
+      value={{
+        user: session?.user ?? null,
+        signIn,
+        signOut,
+        authenticatedRequest,
+      }}
     >
       {children}
     </AuthContext.Provider>
