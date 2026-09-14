@@ -37,14 +37,14 @@ CajaLima se encuentra actualmente en desarrollo. Ya están disponibles el backen
 
 Los cambios de la base de datos se administran con migraciones versionadas de Flyway. La primera crea la tabla de usuarios, sin cuentas precargadas.
 
-Todavía no hay una interfaz para clientes ni funciones de ventas o inventario. La API permite registrar una cuenta, iniciar sesión y consultar los datos del usuario autenticado.
+El frontend permite configurar al primer administrador, iniciar sesión y acceder a un dashboard inicial sin datos de negocio. Ventas e inventario permanecen pendientes.
 
 ## Arquitectura
 
-El frontend previsto se comunicará con el backend mediante una API REST. Spring Boot procesará las operaciones y PostgreSQL guardará la información.
+El frontend React se comunica con el backend mediante una API REST. Spring Boot procesará las operaciones y PostgreSQL guardará la información.
 
 ```text
-Frontend futuro
+React + TypeScript + Vite
        |
        | REST API
        v
@@ -61,7 +61,7 @@ Frontend futuro
 | Backend | Java 21, Spring Boot 4.1.1, Spring Security, Spring Data JPA y Maven |
 | Base de datos | PostgreSQL 17 y Flyway para las migraciones |
 | Infraestructura local | Docker y Docker Compose |
-| Próximamente | React, TypeScript, más pruebas automatizadas y CI/CD |
+| Frontend | React, TypeScript, Vite, React Router, Tailwind CSS e Inter local |
 
 ## Seguridad desde el diseño
 
@@ -120,9 +120,29 @@ Las pruebas generan su propia clave JWT y prueban usuarios en un esquema tempora
 
 En despliegue se usará la configuración privada de la plataforma mediante `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET` y `JWT_EXPIRATION`, sin activar el perfil `local`.
 
+## Frontend local
+
+Con el backend iniciado, abre otra terminal:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Requiere Node.js 22.12 o posterior. Abre `http://127.0.0.1:5173`. La ruta `/setup` crea el primer administrador; después dirige a `/login`. Si el negocio ya está configurado, orienta al login. `/app` necesita una sesión activa.
+
+`VITE_API_URL` es configuración pública, nunca un secreto; su valor predeterminado es `/api`. Vite reenvía esa ruta al backend local mediante un único proxy. Opcionalmente puedes definir `VITE_API_URL` y `VITE_PROXY_TARGET` en `frontend/.env.local`, ignorado por Git. No se necesita crear ningún archivo de entorno para los valores locales predeterminados.
+
+El JWT vive únicamente en memoria de React Context: reduce la persistencia y exposición frente a XSS respecto a localStorage, pero no evita que un XSS activo comprometa una sesión. Al recargar completamente o cerrar la pestaña, se pierde la sesión. No se utilizan localStorage, sessionStorage, cookies ni tokens en URL. Una versión futura podrá evaluar cookies HttpOnly; el backend actual mantiene Bearer JWT.
+
+Para despliegue, compila con `npm run build` y sirve `frontend/dist` mediante HTTPS, con fallback de las rutas de la SPA a `index.html` y proxy `/api` al backend. Configura las cabeceras de seguridad, incluida CSP, en ese servidor. Vite es el servidor de desarrollo. Los valores `VITE_*` se incorporan al código público durante la compilación.
+
+Comprobaciones desde `frontend`: `npm run lint`, `npm run format:check`, `npm test` y `npm run build`. Consulta [el diseño y la arquitectura](docs/design-system.md), [los resultados y la reproducción de pruebas](docs/verification.md) y [los criterios de calidad](CONSTRAINTS.md).
+
 ## Detener el proyecto
 
-Presiona `Ctrl+C` en la terminal de Spring Boot. Después, desde la raíz:
+Presiona `Ctrl+C` en las terminales de Vite y Spring Boot. Después, desde la raíz:
 
 ```powershell
 docker compose stop
@@ -140,10 +160,14 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] Autenticación JWT
 - [ ] Productos
 - [ ] Ventas
-- [ ] Pagos
-- [ ] Dashboard
-- [ ] Frontend React + TypeScript
-- [ ] Pruebas E2E
+- [ ] Métodos de pago
+- [ ] Dashboard con datos reales
+- [x] Identidad visual / Design System
+- [x] Frontend base
+- [x] Login y configuración inicial
+- [ ] Clientes
+- [ ] Reportes
+- [x] Pruebas E2E de autenticación
 - [ ] Despliegue
 
 ## Autor
