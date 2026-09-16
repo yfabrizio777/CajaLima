@@ -1,5 +1,66 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { changeQuantity, cartTotal } from '../src/features/sales/cartState.ts'
+import {
+  parseSale,
+  parseSaleSummary,
+  payments,
+} from '../src/features/sales/types.ts'
+import type { Product } from '../src/features/products/types.ts'
+
+const saleProduct: Product = {
+  id: 1,
+  name: 'Inca Kola',
+  sku: 'IK500',
+  salePrice: 3.5,
+  costPrice: null,
+  stock: 24,
+  minimumStock: 5,
+  active: true,
+  lowStock: false,
+  createdAt: '2026-09-14T12:00:00Z',
+  updatedAt: '2026-09-14T12:00:00Z',
+}
+test('carrito vacío y agregar producto', () => {
+  assert.equal(cartTotal([]), 0)
+  assert.equal(changeQuantity([], saleProduct, 2)[0]?.quantity, 2)
+})
+test('carrito incrementa, disminuye y elimina sin duplicar líneas', () => {
+  const cart = changeQuantity([], saleProduct, 2)
+  const next = changeQuantity(cart, saleProduct, 3)
+  assert.equal(next.length, 1)
+  assert.equal(next[0]?.quantity, 3)
+  assert.equal(changeQuantity(next, saleProduct, 1)[0]?.quantity, 1)
+  assert.deepEqual(changeQuantity(next, saleProduct, 0), [])
+})
+test('carrito respeta stock, cantidades e inactivos', () => {
+  for (const quantity of [-1, 1.5, 25, NaN])
+    assert.deepEqual(changeQuantity([], saleProduct, quantity), [])
+  assert.deepEqual(changeQuantity([], { ...saleProduct, active: false }, 1), [])
+})
+test('total preliminar suma en céntimos', () => {
+  const cart = [
+    { product: saleProduct, quantity: 2 },
+    { product: { ...saleProduct, id: 2, salePrice: 2 }, quantity: 1 },
+  ]
+  assert.equal(cartTotal(cart), 9)
+  assert.equal(
+    cartTotal([{ product: { ...saleProduct, salePrice: 0.1 }, quantity: 3 }]),
+    0.3,
+  )
+})
+test('contratos de venta y pagos manuales', () => {
+  assert.equal(payments.YAPE, 'Yape')
+  assert.equal(payments.CASH, 'Efectivo')
+  assert.throws(() => parseSale({ total: -1 }))
+  assert.throws(() =>
+    parseSaleSummary({ total: NaN, count: 1, date: '2026-09-14' }),
+  )
+  assert.deepEqual(
+    parseSaleSummary({ total: 9, count: 1, date: '2026-09-14' }),
+    { total: 9, count: 1, date: '2026-09-14' },
+  )
+})
 import { formatDate, formatMoney } from '../src/lib/locale.ts'
 import { validate } from '../src/features/auth/validation.ts'
 import {

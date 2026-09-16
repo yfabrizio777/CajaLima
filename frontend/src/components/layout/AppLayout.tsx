@@ -7,8 +7,6 @@ import { Icon } from '../ui/Icon'
 import type { IconName } from '../ui/Icon'
 
 const modules: { name: string; icon: IconName }[] = [
-  { name: 'Ventas', icon: 'bag' },
-
   { name: 'Clientes', icon: 'people' },
   { name: 'Gastos', icon: 'receipt' },
   { name: 'Reportes', icon: 'chart' },
@@ -33,7 +31,15 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Icon name="box" />
         <span>Productos</span>
-      </NavLink>{' '}
+      </NavLink>
+      <NavLink
+        to="/app/sales"
+        className={({ isActive }) => (isActive ? 'nav-active' : 'nav-link')}
+        onClick={onNavigate}
+      >
+        <Icon name="bag" />
+        <span>Ventas</span>
+      </NavLink>
       {modules.map((module) => (
         <div key={module.name} className="nav-future" aria-disabled="true">
           <Icon name={module.icon} />
@@ -107,7 +113,11 @@ export function AppLayout() {
           <div className="breadcrumb">
             Mi negocio <span>/</span>{' '}
             <strong>
-              {pathname.startsWith('/app/products') ? 'Productos' : 'Inicio'}
+              {pathname.startsWith('/app/products')
+                ? 'Productos'
+                : pathname.startsWith('/app/sales')
+                  ? 'Ventas'
+                  : 'Inicio'}
             </strong>
           </div>
           <div className="topbar-right">

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router'
 import '@fontsource-variable/inter/wght.css'
 import './styles/index.css'
 import './styles/products.css'
+import './styles/sales.css'
 import { AuthProvider } from './app/AuthProvider'
 import { AppRouter } from './app/Router'
 

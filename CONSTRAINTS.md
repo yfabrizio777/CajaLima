@@ -25,3 +25,12 @@ Comandos frontend desde `frontend/`; pruebas de navegador con Playwright CLI y a
 - Listado paginado y búsqueda parametrizada. Ajustes concurrentes conservan la cadena de movimientos.
 - Hasta tres capturas nuevas para esta fase, según el alcance solicitado; conservar evidencia histórica útil.
 - Strix obligatorio antes del despliegue público; no atribuir resultados si falta configuración.
+
+## Ventas / POS
+
+- V1 y V2 intactas; V3 agrega venta, snapshots y referencia de movimiento SALE.
+- Venta, items, stock y movimientos se confirman o revierten juntos.
+- Probar última unidad concurrente, rollback intermedio y reintento sin duplicar venta.
+- Precios y autor del servidor, roles ADMIN/EMPLOYEE; totales del día en America/Lima.
+- Navegador y datos aislados; no dejar cuentas ni ventas de prueba en el esquema principal.
+- Hasta tres capturas nuevas de ventas; conservar la evidencia histórica de las fases anteriores.

@@ -14,7 +14,7 @@ En muchos comercios, una parte del dinero entra en efectivo, otra por Yape o Pli
 
 Al cerrar, responder cuánto se vendió, cuánto entró por cada medio, qué productos salieron más o cuánto stock queda puede tomar más tiempo del necesario. También puede ser difícil saber quién registró una operación. CajaLima busca reunir esa información para que revisar el día sea más fácil.
 
-Yape y Plin se contemplan como medios de pago que el negocio podrá registrar. No hay integraciones oficiales ni validación automática de esos pagos.
+Yape y Plin se registran manualmente como medios de pago. No hay integraciones oficiales ni validación automática de esos pagos.
 
 ## ¿Para quién está pensado?
 
@@ -25,7 +25,6 @@ Para bodegas, barberías, cafeterías, minimarkets, pequeños restaurantes, empr
 Estas funciones están previstas y aún no están disponibles:
 
 - Definir permisos específicos para cada operación del negocio según el rol del usuario.
-- Registrar ventas y su medio de pago: efectivo, Yape, Plin o transferencia.
 - Guardar información de clientes.
 - Consultar un panel con ventas diarias y mensuales, productos más vendidos y ticket promedio, es decir, cuánto se vende en promedio por operación.
 - Revisar quién registró cada operación mediante un historial de auditoría.
@@ -36,7 +35,7 @@ CajaLima se encuentra actualmente en desarrollo. Ya están disponibles el backen
 
 Los cambios de la base de datos se administran con migraciones versionadas de Flyway. La primera crea la tabla de usuarios, sin cuentas precargadas.
 
-El frontend permite configurar al primer administrador, iniciar sesión y acceder a un dashboard con el número real de productos activos y alertas de poco stock. Ventas permanece pendiente.
+El frontend permite configurar al primer administrador, iniciar sesión, gestionar productos y registrar ventas. El dashboard muestra productos activos, alertas de poco stock e importe y cantidad de ventas del día en Perú, consultados al backend.
 
 ## Arquitectura
 
@@ -143,7 +142,13 @@ Comprobaciones desde `frontend`: `npm run lint`, `npm run format:check`, `npm te
 
 En `/app/products`, ADMIN puede crear y editar productos, cambiar su estado y ajustar stock con motivo. EMPLOYEE puede consultar y buscar, sin permisos de escritura. Hay búsqueda por nombre o SKU y filtros Todos, Poco stock e Inactivos, con paginación, tabla desktop y tarjetas móviles.
 
-V2 crea productos e historial de movimientos: precios decimales, SKU opcional único, stock no negativo y ajustes atómicos con usuario y motivo. El stock no se modifica desde la edición normal. El dashboard muestra productos activos y poco stock reales; ventas sigue pendiente. Consulta [el contrato y las decisiones del módulo](docs/products.md) y [la verificación](docs/verification.md).
+V2 crea productos e historial de movimientos: precios decimales, SKU opcional único, stock no negativo y ajustes atómicos con usuario y motivo. El stock no se modifica desde la edición normal. Consulta [el contrato y las decisiones del módulo](docs/products.md) y [la verificación](docs/verification.md).
+
+## Ventas / POS
+
+En `/app/sales`, ADMIN y EMPLOYEE pueden buscar productos activos, preparar un carrito y registrar una venta en efectivo, Yape, Plin o transferencia. El pago se registra manualmente; CajaLima no verifica cobros. En móvil, productos y carrito se apilan con un acceso directo a la venta. `/app/sales/history` muestra el historial paginado, filtro por fecha de Perú y detalle.
+
+El servidor calcula los importes y guarda venta, snapshots de productos, salida de stock y movimientos SALE en una transacción. Los bloqueos evitan vender dos veces la última unidad; una referencia por solicitud permite reintentar sin duplicar la venta. El carrito y la sesión viven en memoria: una recarga los pierde. Ante una respuesta incierta, conserva la página y usa «Comprobar y reintentar»; si ya saliste, revisa primero el historial. No hay anulaciones ni devoluciones todavía. Consulta [el contrato de ventas](docs/sales.md).
 
 ## Detener el proyecto
 
@@ -164,14 +169,17 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] Usuarios y roles
 - [x] Autenticación JWT
 - [x] Productos e inventario
-- [ ] Ventas / POS
-- [ ] Métodos de pago
-- [ ] Dashboard de ventas real
+- [x] Ventas / POS
+- [x] Métodos de pago manuales
+- [x] Resumen diario de ventas real
+- [ ] Dashboard avanzado
 - [x] Identidad visual / Design System
 - [x] Frontend base
 - [x] Login y configuración inicial
 - [ ] Clientes
 - [ ] Reportes
+- [ ] Gastos y compras
+- [ ] Integraciones futuras
 - [x] Pruebas E2E de autenticación
 - [ ] Despliegue
 

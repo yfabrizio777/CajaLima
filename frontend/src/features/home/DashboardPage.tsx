@@ -1,3 +1,6 @@
+import { useSalesApi } from '../sales/api'
+import type { SaleSummary } from '../sales/types'
+import { formatMoney } from '../../lib/locale'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useProductsApi } from '../products/api'
@@ -11,6 +14,21 @@ import { useAuth } from '../auth/AuthContext'
 export function DashboardPage() {
   const { user } = useAuth()
   const api = useProductsApi()
+  const salesApi = useSalesApi()
+  const [sales, setSales] = useState<SaleSummary | null>(null)
+  const [salesFailed, setSalesFailed] = useState(false)
+  useEffect(() => {
+    const controller = new AbortController()
+    salesApi
+      .summary(controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted) setSales(value)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setSalesFailed(true)
+      })
+    return () => controller.abort()
+  }, [salesApi])
   const [summary, setSummary] = useState<ProductSummary | null>(null)
   const [failed, setFailed] = useState(false)
   useEffect(() => {
@@ -33,9 +51,13 @@ export function DashboardPage() {
   }[] = [
     {
       title: 'Ventas de hoy',
-      value: '—',
+      value: sales ? formatMoney(sales.total) : '—',
       icon: 'bag',
-      foot: 'Módulo próximamente',
+      foot: sales
+        ? 'Hoy · Hora de Perú'
+        : salesFailed
+          ? 'No pudimos consultar ventas.'
+          : 'Consultando ventas…',
     },
     {
       title: 'Productos',
@@ -49,9 +71,13 @@ export function DashboardPage() {
     },
     {
       title: 'Ventas registradas',
-      value: '—',
+      value: sales ? String(sales.count) : '—',
       icon: 'receipt',
-      foot: 'Módulo próximamente',
+      foot: sales
+        ? 'Hoy · Hora de Perú'
+        : salesFailed
+          ? 'No pudimos consultar ventas.'
+          : 'Consultando ventas…',
     },
   ]
   const name = user?.name.split(/\s+/)[0] || 'qué gusto verte'
@@ -73,11 +99,11 @@ export function DashboardPage() {
       </section>
       <div className="metrics-heading">
         <h2>Un vistazo a tu negocio</h2>
-        <span>Productos reales · Ventas próximamente</span>
+        <span>Tu negocio hoy · Datos reales</span>
       </div>
       <section
         className="metrics-grid"
-        aria-label="Resumen de productos y módulos futuros"
+        aria-label="Resumen de productos y ventas de hoy"
       >
         {metrics.map((metric, index) => (
           <article
@@ -98,16 +124,16 @@ export function DashboardPage() {
       <div className="dashboard-content">
         <section className="empty-panel">
           <div className="panel-heading">
-            <h2>Aquí empieza tu próxima etapa</h2>
-            <span className="soft-badge">Estamos construyendo</span>
+            <h2>Tu negocio, en movimiento</h2>
+            <span className="soft-badge">Ventas disponibles</span>
           </div>
           <div className="empty-body">
             <Storefront />
             <h3>Todo listo para dar el primer paso.</h3>
             <p>
               Ya puedes organizar tus productos y sus existencias.
-              <br className="desktop-break" /> Aquí encontrarás un resumen claro
-              de tus próximas ventas.
+              <br className="desktop-break" /> Aquí tienes un resumen claro de
+              tus ventas de hoy.
             </p>
             <Link className="future-pill" to="/app/products">
               <Icon name="box" />
@@ -116,9 +142,7 @@ export function DashboardPage() {
           </div>
           <div className="empty-footer">
             <Icon name="info" />
-            <span>
-              Las ventas e importes de ventas aún no están disponibles.
-            </span>
+            <span>Yape, Plin y transferencias se registran manualmente.</span>
           </div>
         </section>
         <aside className="next-steps">
@@ -150,7 +174,7 @@ export function DashboardPage() {
                 <div>
                   <h3>Tu primera venta</h3>
                   <p>Registra qué vendiste y cómo te pagaron.</p>
-                  <small>Próximamente</small>
+                  <small>Disponible</small>
                 </div>
               </li>
             </ol>
