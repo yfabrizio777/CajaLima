@@ -1,0 +1,35 @@
+@layer components {
+  .customer-card > p {
+    margin-block: 12px;
+    overflow-wrap: anywhere;
+    color: var(--color-text-muted);
+  }
+  .customer-more {
+    margin-top: 16px;
+  }
+  .customer-more > summary {
+    min-height: 44px;
+    padding-block: 12px;
+    cursor: pointer;
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+  .customer-more textarea {
+    resize: vertical;
+    min-height: 96px;
+  }
+  .customer-detail {
+    display: grid;
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .customer-detail dt {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+  }
+  .customer-detail dd {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

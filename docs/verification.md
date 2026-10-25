@@ -1,5 +1,57 @@
 # Verificación de CajaLima
 
+## Clientes — 25/10/2026
+
+Base: `a8abc87`. V4 agrega clientes; V1–V3 no se modifican. Sin cambios de versiones ni asociación con ventas.
+
+| Comprobación | Resultado |
+| --- | --- |
+| `mvn clean test` | 88 pruebas, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS |
+| Distribución backend | 71 anteriores + 17 de clientes |
+| Ciclo de prueba | Alta inicial falló con 404 antes de implementar; después pasó. Una mutación temporal del permiso de estado fue detectada (403 esperado frente a 200); regla ADMIN restaurada y suite final correcta |
+| `npm ci`, `npm test` | Instalación desde lockfile correcta; 15 pruebas, 0 fallos, 0 omitidas |
+| `npm run lint`, `npm run build`, `npm run format:check` | Correctos, sin supresiones |
+| Navegador Chromium, backend real | ADMIN y EMPLOYEE crean, consultan, editan y buscan; solo ADMIN desactiva/reactiva; duplicados rechazados; vacío, búsqueda vacía y error de conexión recuperable |
+| Autorización por API | EMPLOYEE recibe 403 al cambiar estado; DELETE de ADMIN recibe 405 y conserva el cliente |
+| Responsive y axe | 10 comprobaciones de listado, formulario, detalle, vacío y empleado; 0 infracciones WCAG detectadas, sin overflow horizontal; tamaños 375×812, 768×1024, 1366×768 |
+| JavaScript y teclado | 0 errores inesperados; primer error enfocado; Escape cierra diálogo; sesión sin almacenamiento persistente |
+| PostgreSQL | 17.10, healthy en 127.0.0.1:5433. V4 aplicada correctamente en esquemas de prueba |
+| Datos principales | `public` conservó V1–V3, 1 usuario, 0 productos, 0 ventas; V4 no se aplicó a ese esquema durante las pruebas |
+
+Se revisaron visualmente `clientes-desktop.png` y `clientes-mobile.png`, con datos ficticios del esquema exclusivo. Las instancias temporales de backend/Vite y el navegador se cerraron; los esquemas de pruebas se eliminaron. Docker/PostgreSQL permanecen activos; no se eliminaron volúmenes. Nunca se utilizó 8180.
+
+Las tres suites de integración anteriores y la nueva usan sus propios esquemas. Para que `CajalimaApplicationTests` tampoco migre el esquema principal, se ejecutó la suite desde `backend` con estas variables limitadas al proceso de prueba:
+
+```powershell
+$testSchema = 'customers_smoke_' + [guid]::NewGuid().ToString('N')
+$env:SPRING_FLYWAY_SCHEMAS = $testSchema
+$env:SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA = $testSchema
+$env:SPRING_DATASOURCE_HIKARI_SCHEMA = $testSchema
+mvn clean test
+```
+
+Usar una terminal dedicada y cerrarla al terminar. Eliminar únicamente `$testSchema`, una vez terminada la suite, después de verificar su nombre y que fue creado por esa ejecución. Las suites de integración limpian sus esquemas automáticamente.
+
+### Reproducir navegador de clientes
+
+Iniciar un backend con un esquema nuevo `customers_browser_<uuid>`, configurando las mismas tres variables de esquema y un JWT privado temporal; usar 8080 y Vite 5173 si están libres. No usar el esquema principal. El flujo exige setup disponible, crea cuentas y clientes ficticios, y no imprime contraseña ni JWT.
+
+```powershell
+playwright-cli.cmd -s=cajalima-customers open http://127.0.0.1:5173/login
+$flow = [IO.File]::ReadAllText((Join-Path (Get-Location) 'frontend/tests/customers-browser-flow.js')).Replace('export default ', '')
+[IO.File]::WriteAllText((Join-Path (Get-Location) 'customers-browser-flow.tmp'), $flow)
+playwright-cli.cmd -s=cajalima-customers --raw run-code --filename=customers-browser-flow.tmp
+playwright-cli.cmd -s=cajalima-customers close
+```
+
+Al terminar, detener solo las instancias creadas y eliminar exclusivamente el esquema nuevo de navegador. No borrar `public` ni volúmenes.
+
+### Límites de seguridad pendientes
+
+Los avisos de la auditoría inicial siguen vigentes: `npm audit` detectó dos paquetes con severidad alta en herramientas de desarrollo/build (Vite 8.3.0 y source-map-js 1.2.1); `npm audit --omit=dev` reportó 0 vulnerabilidades conocidas. No se añadieron dependencias ni se cambió el lockfile en clientes. Requieren revisión y corrección separada antes del despliegue público; no representan un pentest de CajaLima.
+
+Strix continúa pendiente: autenticación reconocida pero `STRIX_LLM` sin definir en la auditoría inicial; no se ejecutó pentest. No se desplegó la aplicación públicamente. Los resultados Graphify anteriores conservan su fecha y base históricas; no se presentan como verificación del módulo nuevo.
+
 ## Productos e inventario — 14/09/2026
 
 Base: `8bb530f`. Se conservan las pruebas anteriores; V1 no cambia y V2 ya aplicada no se reescribe.

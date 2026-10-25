@@ -1,6 +1,6 @@
 # Diseño y arquitectura de CajaLima
 
-La Fase B conserva el backend de `36bfac6`. Solo incorpora configuración inicial, login, dashboard vacío y 404.
+La descripción de Fase B conserva el contexto histórico del backend de `36bfac6`: configuración inicial, login, dashboard vacío y 404. Los módulos actuales y sus verificaciones se detallan en README y en sus documentos de producto, ventas y clientes.
 
 ## Identidad
 
@@ -31,3 +31,9 @@ React Router declara `/setup`, `/login`, `/app` y 404. React Context conserva la
 Graphify encontró el camino `AuthForm → submit → registerOwner → request` y `AuthController → AuthService → UserRepository → User`. El enlace HTTP entre ambos grafos y la persistencia PostgreSQL se verificaron con llamadas reales y revisión del código, no se presentan como aristas inferidas automáticamente por la herramienta.
 
 Configuración consultada mediante Context7: [Vite](https://vite.dev/config/server-options.html), [Tailwind con Vite](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation), [Fontsource](https://fontsource.org/docs/getting-started/install) y [axe](https://github.com/dequelabs/axe-core/blob/develop/doc/API.md). No se incorporan Redux ni librerías completas de UI.
+
+## Clientes
+
+`features/customers` agrega listado, formulario y detalle en `/app/customers`; Clientes es navegación activa junto con Productos y Ventas. Se reutilizan Dialog, Field, KusiNote, tipos visuales y estilos de Productos. Solo el nombre es obligatorio; correo, dirección y nota están agrupados en un desplegable. Tabla desde 1024 px y tarjetas por debajo, con acciones Ver/Editar y cambio de estado exclusivo de ADMIN. Los datos y permisos vienen del backend real; no hay almacenamiento persistente de clientes ni nueva librería de UI.
+
+La implementación conserva limpieza/cancelación de consultas con `useEffect`, documentada en [React](https://react.dev/reference/react/useEffect), y búsqueda paginada con [Specifications de Spring Data JPA](https://docs.spring.io/spring-data/jpa/reference/jpa/specifications.html), consultadas mediante Context7.

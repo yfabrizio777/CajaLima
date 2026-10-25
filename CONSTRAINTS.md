@@ -34,3 +34,12 @@ Comandos frontend desde `frontend/`; pruebas de navegador con Playwright CLI y a
 - Precios y autor del servidor, roles ADMIN/EMPLOYEE; totales del día en America/Lima.
 - Navegador y datos aislados; no dejar cuentas ni ventas de prueba en el esquema principal.
 - Hasta tres capturas nuevas de ventas; conservar la evidencia histórica de las fases anteriores.
+
+## Clientes
+
+- V4 nueva; V1–V3 intactas. Sin DELETE físico ni cambios en ventas.
+- ADMIN y EMPLOYEE crean, consultan y editan datos básicos; solo ADMIN cambia estado, comprobado también por API.
+- Documento opcional, normalizado y único por tipo/número mediante índice PostgreSQL, incluyendo altas concurrentes e inactivos. Correo compartible.
+- Campos y consultas acotados, rechazo de campos internos, búsqueda literal paginada y respuestas validadas.
+- Pruebas y navegador en esquemas exclusivos; no aplicar V4 al esquema principal durante la verificación.
+- Tabla desktop, tarjetas móviles y axe sin infracciones en los tamaños del proyecto. Hasta dos capturas nuevas.

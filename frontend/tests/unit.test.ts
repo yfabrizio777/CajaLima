@@ -1,5 +1,94 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import {
+  customerBody,
+  validateCustomer,
+} from '../src/features/customers/validation.ts'
+import {
+  parseCustomer,
+  parseCustomers,
+} from '../src/features/customers/types.ts'
+
+const customerValues = {
+  name: '  María   Quispe ',
+  documentType: 'DNI',
+  documentNumber: '12 345678',
+  phone: '999 888 777',
+  email: '',
+  address: '',
+  notes: '',
+}
+test('clientes requieren solo nombre y normalizan documento y contacto', () => {
+  assert.deepEqual(validateCustomer(customerValues), {})
+  assert.deepEqual(customerBody(customerValues), {
+    name: 'María Quispe',
+    documentType: 'DNI',
+    documentNumber: '12345678',
+    phone: '999888777',
+    email: null,
+    address: null,
+    notes: null,
+  })
+  assert.equal(
+    customerBody({
+      ...customerValues,
+      documentType: '',
+      documentNumber: 'ab 123',
+    }).documentType,
+    'OTHER',
+  )
+  assert.deepEqual(
+    validateCustomer({
+      ...customerValues,
+      documentType: '',
+      documentNumber: '',
+      phone: '',
+    }),
+    {},
+  )
+})
+test('clientes validan documentos manuales, correo y límites', () => {
+  for (const invalid of [
+    { name: ' ' },
+    { documentNumber: '123' },
+    { documentType: 'RUC', documentNumber: 'abcdefghijk' },
+    { documentType: 'CE', documentNumber: '<script>' },
+    { email: 'sin-correo' },
+    { phone: 'letras' },
+    { notes: 'x'.repeat(1001) },
+    { address: 'x'.repeat(241) },
+  ])
+    assert.ok(
+      Object.keys(validateCustomer({ ...customerValues, ...invalid })).length,
+    )
+})
+test('contrato de clientes rechaza respuestas inválidas y descarta campos internos', () => {
+  const raw = {
+    id: 1,
+    name: 'María',
+    documentType: null,
+    documentNumber: null,
+    phone: null,
+    email: null,
+    address: null,
+    notes: null,
+    active: true,
+    createdAt: '2026-10-25T12:00:00Z',
+    updatedAt: '2026-10-25T12:00:00Z',
+    secret: 'discarded',
+  }
+  assert.equal('secret' in parseCustomer(raw), false)
+  assert.throws(() => parseCustomer({ ...raw, active: 'true' }))
+  assert.throws(() => parseCustomer({ ...raw, documentType: 'PASSPORT' }))
+  assert.throws(() => parseCustomer({ ...raw, createdAt: 'ayer' }))
+  assert.throws(() =>
+    parseCustomers({ items: [raw], total: -1, page: 0, size: 20 }),
+  )
+  assert.equal(
+    parseCustomers({ items: [raw], total: 1, page: 0, size: 20 }).items.length,
+    1,
+  )
+})
 import { changeQuantity, cartTotal } from '../src/features/sales/cartState.ts'
 import {
   parseSale,

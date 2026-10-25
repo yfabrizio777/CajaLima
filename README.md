@@ -25,7 +25,6 @@ Para bodegas, barberías, cafeterías, minimarkets, pequeños restaurantes, empr
 Estas funciones están previstas y aún no están disponibles:
 
 - Definir permisos específicos para cada operación del negocio según el rol del usuario.
-- Guardar información de clientes.
 - Consultar un panel con ventas diarias y mensuales, productos más vendidos y ticket promedio, es decir, cuánto se vende en promedio por operación.
 - Revisar quién registró cada operación mediante un historial de auditoría.
 
@@ -35,7 +34,7 @@ CajaLima se encuentra actualmente en desarrollo. Ya están disponibles el backen
 
 Los cambios de la base de datos se administran con migraciones versionadas de Flyway. La primera crea la tabla de usuarios, sin cuentas precargadas.
 
-El frontend permite configurar al primer administrador, iniciar sesión, gestionar productos y registrar ventas. El dashboard muestra productos activos, alertas de poco stock e importe y cantidad de ventas del día en Perú, consultados al backend.
+El frontend permite configurar al primer administrador, iniciar sesión, gestionar productos y clientes y registrar ventas. El dashboard muestra productos activos, alertas de poco stock e importe y cantidad de ventas del día en Perú, consultados al backend.
 
 ## Arquitectura
 
@@ -150,6 +149,12 @@ En `/app/sales`, ADMIN y EMPLOYEE pueden buscar productos activos, preparar un c
 
 El servidor calcula los importes y guarda venta, snapshots de productos, salida de stock y movimientos SALE en una transacción. Los bloqueos evitan vender dos veces la última unidad; una referencia por solicitud permite reintentar sin duplicar la venta. El carrito y la sesión viven en memoria: una recarga los pierde. Ante una respuesta incierta, conserva la página y usa «Comprobar y reintentar»; si ya saliste, revisa primero el historial. No hay anulaciones ni devoluciones todavía. Consulta [el contrato de ventas](docs/sales.md).
 
+## Clientes
+
+En `/app/customers`, ADMIN y EMPLOYEE pueden registrar, buscar, consultar y editar datos básicos de clientes. Solo ADMIN puede desactivar o reactivar; no hay eliminación física. El único dato obligatorio es el nombre. Documento, teléfono, correo, dirección y nota son opcionales. Se admiten DNI, RUC, CE y otro documento, sin integraciones oficiales. La pareja tipo/número normalizada es única, incluso entre clientes inactivos; el correo se puede compartir.
+
+V4 crea `customers` sin cambiar V1–V3. El listado usa tabla en desktop y tarjetas en móvil. Todavía no se asocian clientes a ventas ni se incluyen créditos o campañas. Consulta [el contrato de clientes](docs/customers.md) y [la verificación](docs/verification.md).
+
 ## Detener el proyecto
 
 Presiona `Ctrl+C` en las terminales de Vite y Spring Boot. Después, desde la raíz:
@@ -176,7 +181,7 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] Identidad visual / Design System
 - [x] Frontend base
 - [x] Login y configuración inicial
-- [ ] Clientes
+- [x] Clientes
 - [ ] Reportes
 - [ ] Gastos y compras
 - [ ] Integraciones futuras

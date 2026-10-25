@@ -9,6 +9,7 @@ import { ProductsPage } from '../features/products/ProductsPage'
 import { SalesPage } from '../features/sales/SalesPage'
 import { SalesHistoryPage } from '../features/sales/SalesHistoryPage'
 import { NotFoundPage } from './NotFoundPage'
+import { CustomersPage } from '../features/customers/CustomersPage'
 
 function PrivateRoute() {
   return useAuth().user ? <Outlet /> : <Navigate to="/login" replace />
@@ -24,6 +25,7 @@ export function AppRouter() {
       '/app/products': 'Productos',
       '/app/sales': 'Ventas',
       '/app/sales/history': 'Ventas registradas',
+      '/app/customers': 'Clientes',
     }
     document.title = `${titles[pathname] || 'CajaLima'} · Tu negocio, más claro.`
     document.getElementById('main')?.focus()
@@ -40,6 +42,7 @@ export function AppRouter() {
           <Route path="products" element={<ProductsPage />} />
           <Route path="sales" element={<SalesPage />} />
           <Route path="sales/history" element={<SalesHistoryPage />} />
+          <Route path="customers" element={<CustomersPage />} />
         </Route>
         <Route path="/app/*" element={<NotFoundPage />} />
       </Route>
