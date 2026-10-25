@@ -6,6 +6,7 @@ import './styles/index.css'
 import './styles/products.css'
 import './styles/sales.css'
 import './styles/customers.css'
+import './styles/accounts.css'
 import { AuthProvider } from './app/AuthProvider'
 import { AppRouter } from './app/Router'
 

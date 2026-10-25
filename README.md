@@ -131,7 +131,7 @@ Requiere Node.js 22.12 o posterior. Abre `http://127.0.0.1:5173`. La ruta `/setu
 
 `VITE_API_URL` es configuración pública, nunca un secreto; su valor predeterminado es `/api`. Vite reenvía esa ruta al backend local mediante un único proxy. Opcionalmente puedes definir `VITE_API_URL` y `VITE_PROXY_TARGET` en `frontend/.env.local`, ignorado por Git. No se necesita crear ningún archivo de entorno para los valores locales predeterminados.
 
-El JWT vive únicamente en memoria de React Context: reduce la persistencia y exposición frente a XSS respecto a localStorage, pero no evita que un XSS activo comprometa una sesión. Al recargar completamente o cerrar la pestaña, se pierde la sesión. No se utilizan localStorage, sessionStorage, cookies ni tokens en URL. Una versión futura podrá evaluar cookies HttpOnly; el backend actual mantiene Bearer JWT.
+El JWT vive únicamente en memoria de React Context: reduce la persistencia y exposición frente a XSS respecto a localStorage, pero no evita que un XSS activo comprometa una sesión. Al recargar completamente o cerrar la pestaña, se pierde la sesión. La sesión no se guarda en localStorage, sessionStorage, cookies ni URL. Solo la intención de un pago pendiente se conserva en sessionStorage de la pestaña, sin JWT, para reintentar con la misma referencia. Una versión futura podrá evaluar cookies HttpOnly; el backend actual mantiene Bearer JWT.
 
 Para despliegue, compila con `npm run build` y sirve `frontend/dist` mediante HTTPS, con fallback de las rutas de la SPA a `index.html` y proxy `/api` al backend. Configura las cabeceras de seguridad, incluida CSP, en ese servidor. Vite es el servidor de desarrollo. Los valores `VITE_*` se incorporan al código público durante la compilación.
 
@@ -153,7 +153,11 @@ El servidor calcula los importes y guarda venta, snapshots de productos, salida 
 
 En `/app/customers`, ADMIN y EMPLOYEE pueden registrar, buscar, consultar y editar datos básicos de clientes. Solo ADMIN puede desactivar o reactivar; no hay eliminación física. El único dato obligatorio es el nombre. Documento, teléfono, correo, dirección y nota son opcionales. Se admiten DNI, RUC, CE y otro documento, sin integraciones oficiales. La pareja tipo/número normalizada es única, incluso entre clientes inactivos; el correo se puede compartir.
 
-V4 crea `customers` sin cambiar V1–V3. El listado usa tabla en desktop y tarjetas en móvil. V5 permite asociar opcionalmente un cliente activo a una venta: el POS busca por nombre/documento y permite crear un cliente sin perder el carrito. Público general representa una venta sin cliente, sin crear una persona ficticia. El detalle del cliente muestra su historial real de compras; desactivarlo conserva las ventas anteriores. No se incluyen créditos ni campañas. Consulta [el contrato de clientes](docs/customers.md), [ventas](docs/sales.md) y [la verificación](docs/verification.md).
+V4 crea `customers` sin cambiar V1–V3. El listado usa tabla en desktop y tarjetas en móvil. V5 permite asociar opcionalmente un cliente activo a una venta: el POS busca por nombre/documento y permite crear un cliente sin perder el carrito. Público general representa una venta sin cliente, sin crear una persona ficticia. El detalle del cliente muestra su historial real de compras; desactivarlo conserva las ventas anteriores. Los fiados y sus pagos se administran en la cuenta del cliente; no se incluyen campañas. Consulta [el contrato de clientes](docs/customers.md), [ventas](docs/sales.md) y [la verificación](docs/verification.md).
+
+## Fiados y saldos pendientes
+
+En el POS puedes elegir «Fiado» con un cliente activo. La venta descuenta stock y genera deuda en la misma transacción. En el detalle del cliente, «Saldo pendiente» permite registrar pagos parciales o totales en efectivo, Yape, Plin o transferencia, y consultar movimientos con fecha, referencia y autor. El saldo se deriva del historial; no se edita ni admite pagos superiores a la deuda. Cada pago tiene una referencia para reintentos, recuperable en la misma pestaña tras recargar y autenticar al mismo usuario. No hay intereses, cuotas ni cobranza automática. Consulta [fiados y cuentas](docs/accounts.md).
 
 ## Detener el proyecto
 
@@ -183,12 +187,13 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] Login y configuración inicial
 - [x] Clientes
 - [x] Asociación cliente ↔ venta
-- [ ] Fiados
+- [x] Fiados y saldos pendientes
 - [ ] Reportes
 - [ ] Gastos y compras
 - [ ] Integraciones futuras
 - [x] Pruebas E2E de autenticación
-- [ ] Despliegue
+- [ ] Security gate Strix
+- [ ] Deploy público
 
 ## Autor
 

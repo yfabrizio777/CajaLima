@@ -4,6 +4,7 @@ import { useCustomersApi } from './api'
 import { customerDocument } from './types'
 import type { Customer } from './types'
 import { CustomerPurchaseHistory } from './CustomerPurchaseHistory'
+import { CustomerAccount } from '../accounts/CustomerAccount'
 
 export function CustomerDetail({
   id,
@@ -50,6 +51,7 @@ export function CustomerDetail({
         <output>Consultando cliente…</output>
       ) : (
         <>
+          <CustomerAccount customerId={id} active={customer.active} />
           <dl className="customer-detail">
             {Object.entries({
               Cliente: customer.name,

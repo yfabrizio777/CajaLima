@@ -1,0 +1,47 @@
+@layer components {
+  .customer-account {
+    margin-block: 24px;
+    padding: 20px;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+  }
+  .customer-account h3 {
+    font-size: 1.125rem;
+  }
+  .account-balance {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-block: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .customer-account h4 {
+    margin-top: 24px;
+    margin-bottom: 12px;
+  }
+  .account-movements li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 12px;
+    border-top: 1px solid var(--color-border);
+  }
+  .account-movements li > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .account-movements span {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+  .account-credit {
+    color: var(--color-text);
+  }
+  .account-payment {
+    color: var(--color-primary);
+  }
+}

@@ -5,7 +5,8 @@ import { useSalesApi } from './api'
 import { Cart } from './Cart'
 import { PosProducts } from './PosProducts'
 import { SaleConfirmation } from './SaleConfirmation'
-import { changeQuantity } from './cartState'
+import { changeQuantity, cartTotal } from './cartState'
+import { creditSaleError } from './creditValidation'
 import { CustomerPicker } from './CustomerPicker'
 import type { Customer } from '../customers/types'
 import type { CartLine } from './cartState'
@@ -27,6 +28,11 @@ export function SalesPage() {
   const [confirmed, setConfirmed] = useState<Sale | null>(null)
   const [customer, setCustomer] = useState<Customer | null>(null)
   const locked = busy || uncertain
+  const creditError = creditSaleError(
+    payment,
+    customer?.id ?? null,
+    cartTotal(lines),
+  )
   useEffect(() => {
     const controller = new AbortController()
     const timer = setTimeout(() => {
@@ -60,7 +66,7 @@ export function SalesPage() {
     setRequestId(crypto.randomUUID())
   }
   async function submit() {
-    if (busy || !lines.length) return
+    if (busy || !lines.length || creditError) return
     setBusy(true)
     setError('')
     try {
@@ -155,6 +161,7 @@ export function SalesPage() {
             }}
           />
           <Cart
+            creditError={creditError}
             lines={lines}
             payment={payment}
             locked={locked}

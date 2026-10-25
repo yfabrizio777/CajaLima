@@ -1,5 +1,42 @@
 # Verificación de CajaLima
 
+## Fiados y saldos pendientes — 25/10/2026
+
+Base: `2a15625`. V6 crea el ledger; V1–V5 y dependencias permanecen intactos.
+
+| Comprobación | Resultado |
+| --- | --- |
+| `mvn clean test` | 118 pruebas, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS |
+| Backend nuevo | 18 pruebas de cuenta: crédito/stock, pagos, importes, permisos, reintentos, concurrencia, integridad SQL y rollback completo |
+| Frontend | 22 pruebas; lint, build y format:check correctos, sin supresiones |
+| Concurrencia | Dos pagos de 15 sobre deuda de 20 aceptan solo uno; misma referencia simultánea no duplica; referencia global entre clientes produce conflicto controlado |
+| Integridad | FK compuesta exige que CREDIT coincida con venta, cliente, total, actor y medio; CHECK rechaza campos incompatibles y valores nulos indebidos |
+| Playwright real | ADMIN y EMPLOYEE: venta fiada de 30, pago Yape de 10, efectivo de 20, saldo cero; stock final 8 y seis movimientos, sin duplicados |
+| Respuesta perdida | Pago confirmado con respuesta abortada; recarga/login restaura UUID e importe, incluso con saldo cero; reintento devuelve el mismo movimiento |
+| Recuperación | Rechazo definitivo elimina intento pendiente; cancelar después no deja acción fantasma. Pago adicional de 1 recibe 409 |
+| Axe y responsive | 11 comprobaciones sin infracciones detectadas ni overflow: POS, cuenta y diálogo en 375×812, 768×1024 y 1366×768, más saldo cero y empleado |
+| JavaScript | 0 errores inesperados; JWT solo en memoria; sessionStorage conserva únicamente intención de pago, acotada por actor y cliente |
+| Graphify AST | Backend 488 nodos/1061 aristas; frontend 230/748. Sin ciclos de imports |
+| Datos y limpieza | Tres esquemas exclusivos eliminados; public conserva V1–V3, 1 usuario, 0 productos y 0 ventas, sin ledger |
+
+Revisión interna independiente y segunda revisión con Codex CLI en modo read-only. Se corrigieron la correspondencia SQL de CREDIT, precisión decimal acumulada, validación Unicode y recuperación de pagos pendientes; los casos correspondientes quedaron probados. El backend calcula el saldo, bloquea la fila del cliente antes de pagar y toma el actor del JWT. La prueba inicial de crédito falló con 400 antes de implementar. La suite final conserva las 100 pruebas anteriores.
+
+Graphify confirmó `SaleService → CustomerAccountService → AccountMovementRepository`, `CustomerDetail.tsx → CustomerAccount.tsx` y `PaymentDialog.tsx → paymentIntent.ts`. Cuenta no importa ventas; HTTP y persistencia se comprobaron mediante integración real. Artefactos AST locales ignorados por Git, sin uso de LLM.
+
+Flujo reproducible: `frontend/tests/accounts-browser-flow.js`. Iniciar backend 8080 con esquema nuevo exclusivo `account_browser_<id>`, las tres variables de esquema descritas abajo y JWT temporal; Vite 5173. Nunca apuntar el flujo al esquema principal. Desde raíz:
+
+```powershell
+playwright-cli.cmd -s=cajalima-accounts open http://127.0.0.1:5173/login
+$flow = [IO.File]::ReadAllText((Join-Path (Get-Location) 'frontend/tests/accounts-browser-flow.js')).Replace('export default ', '')
+[IO.File]::WriteAllText((Join-Path (Get-Location) 'accounts-browser-flow.tmp'), $flow)
+playwright-cli.cmd -s=cajalima-accounts --raw run-code --filename=accounts-browser-flow.tmp
+playwright-cli.cmd -s=cajalima-accounts close
+```
+
+El flujo genera credenciales ficticias en memoria sin imprimir secretos. Capturas revisadas: `fiados-cuenta-desktop.png` y `fiados-cuenta-mobile.png`. Navegador e instancias temporales cerrados; PostgreSQL permanece healthy en 127.0.0.1:5433. Nunca se utilizó 8180 ni se borraron volúmenes.
+
+Strix: autenticación reconocida, `STRIX_LLM` sin definir; no se ejecutó pentest. Sigue pendiente y obligatorio antes del despliegue público. No se actualizaron dependencias; los avisos previos de Vite/source-map-js requieren tratamiento separado antes de publicar. Contrato y límites: [cuentas por cobrar](accounts.md).
+
 ## Asociación cliente y venta — 25/10/2026
 
 Base: `84fd38c`. V5 agrega la FK nullable; V1–V4 y dependencias permanecen intactas.

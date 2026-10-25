@@ -1,5 +1,128 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import {
+  readPaymentIntent,
+  savePaymentIntent,
+  clearPaymentIntent,
+} from '../src/features/accounts/paymentIntent.ts'
+import { formatAccountMoney } from '../src/features/accounts/money.ts'
+import {
+  collectionMethods,
+  payments as salePayments,
+} from '../src/lib/payments.ts'
+import {
+  parseAccount,
+  parseAccountMovements,
+  validatePayment,
+} from '../src/features/accounts/types.ts'
+import { creditSaleError } from '../src/features/sales/creditValidation.ts'
+
+test('fiado requiere cliente y solo admite importe positivo', () => {
+  assert.equal(salePayments.CREDIT, 'Fiado')
+  assert.equal('CREDIT' in collectionMethods, false)
+  assert.equal(creditSaleError('CASH', null, 30), '')
+  assert.equal(
+    creditSaleError('CREDIT', null, 30),
+    'Selecciona un cliente para registrar una venta fiada.',
+  )
+  assert.ok(creditSaleError('CREDIT', 1, 0))
+  assert.equal(creditSaleError('CREDIT', 1, 30), '')
+})
+test('pagos validan centimos, limites y saldo sin aceptar credito como cobro', () => {
+  assert.deepEqual(validatePayment('10.00', 'YAPE', '', 30), {})
+  for (const amount of ['0', '-1', '30.01', '1.001', 'NaN', '1e1', ''])
+    assert.ok(validatePayment(amount, 'CASH', '', 30).amount)
+  assert.ok(validatePayment('1', 'CREDIT', '', 30).paymentMethod)
+  assert.ok(validatePayment('1', 'CASH', 'x'.repeat(241), 30).note)
+  assert.ok(validatePayment('1', 'CASH', '', 0).amount)
+})
+test('cuenta valida saldo derivado, movimientos y cliente sin deuda', () => {
+  const account = {
+    customerId: 1,
+    customerName: 'María',
+    outstandingBalance: 20,
+    totalCredit: 30,
+    totalPaid: 10,
+    lastMovementAt: '2026-10-25T12:00:00Z',
+  }
+  assert.equal(parseAccount(account).outstandingBalance, '20.00')
+  assert.throws(() => parseAccount({ ...account, outstandingBalance: -1 }))
+  assert.throws(() => parseAccount({ ...account, outstandingBalance: 21 }))
+  assert.equal(
+    parseAccount({
+      ...account,
+      outstandingBalance: 0,
+      totalCredit: 0,
+      totalPaid: 0,
+      lastMovementAt: null,
+    }).outstandingBalance,
+    '0.00',
+  )
+  const movement = {
+    id: 1,
+    customerId: 1,
+    saleId: null,
+    type: 'PAYMENT',
+    amount: 10,
+    paymentMethod: 'YAPE',
+    note: null,
+    createdBy: 1,
+    createdByName: 'Admin',
+    createdAt: '2026-10-25T12:00:00Z',
+  }
+  assert.equal(
+    parseAccountMovements({ items: [movement], total: 1, page: 0, size: 20 })
+      .items[0]?.amount,
+    10,
+  )
+  assert.throws(() =>
+    parseAccountMovements({
+      items: [{ ...movement, paymentMethod: 'CREDIT' }],
+      total: 1,
+      page: 0,
+      size: 20,
+    }),
+  )
+})
+test('acumulados financieros conservan centimos fuera de Number seguro', () => {
+  const account = parseAccount({
+    customerId: 1,
+    customerName: 'María',
+    totalCredit: '9999999999999999.99',
+    totalPaid: '9999999999999999.49',
+    outstandingBalance: '0.50',
+    lastMovementAt: null,
+  })
+  assert.equal(account.outstandingBalance, '0.50')
+  assert.equal(formatAccountMoney('0.00'), 'S/ 0.00')
+  assert.deepEqual(
+    validatePayment('0.50', 'YAPE', '', account.outstandingBalance),
+    {},
+  )
+})
+test('intento de pago se restaura por actor y cliente hasta confirmar', () => {
+  const data = new Map<string, string>()
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => data.set(key, value),
+      removeItem: (key: string) => data.delete(key),
+    },
+  })
+  const intent = {
+    requestId: '12a45678-1234-1234-1234-123456789abc',
+    amount: '20.00',
+    paymentMethod: 'CASH' as const,
+    note: null,
+  }
+  savePaymentIntent(1, 2, intent)
+  assert.deepEqual(readPaymentIntent(1, 2), intent)
+  assert.equal(readPaymentIntent(2, 2), null)
+  assert.equal(readPaymentIntent(1, 3), null)
+  clearPaymentIntent(1, 2)
+  assert.equal(readPaymentIntent(1, 2), null)
+})
 import { parseCustomerPurchases } from '../src/features/customers/purchases.ts'
 import {
   customerBody,

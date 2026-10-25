@@ -19,7 +19,7 @@ Campos de escritura: `name` (obligatorio, 160), `documentType` (DNI/RUC/CE/OTHER
 
 La pareja tipo/número es única también entre inactivos, mediante índice único en PostgreSQL; múltiples documentos ausentes y correos compartidos están permitidos. Teléfono admite formato internacional manual; elimina espacios, paréntesis y guiones para buscar por dígitos. Búsqueda literal sin distinguir mayúsculas por nombre, documento o teléfono. No se intenta deduplicar personas solo por nombre. GET acepta `active=true` opcional para seleccionar clientes del POS; sin ese parámetro mantiene activos e inactivos en el listado habitual.
 
-Errores: 400 entrada inválida, 401 sin sesión, 403 sin permiso, 404 inexistente, 409 documento duplicado. No se exponen datos personales en logs. La información pertenece al único negocio de esta versión; no existe multiempresa. V5 permite la asociación opcional y consulta de compras desde Sale, sin dependencia circular de servicios; ver [ventas](sales.md). No hay créditos, campañas ni integraciones.
+Errores: 400 entrada inválida, 401 sin sesión, 403 sin permiso, 404 inexistente, 409 documento duplicado. No se exponen datos personales en logs. La información pertenece al único negocio de esta versión; no existe multiempresa. V5 permite la asociación opcional y consulta de compras desde Sale, sin dependencia circular de servicios; ver [ventas](sales.md). V6 agrega [cuenta y pagos de fiados](accounts.md) al principio del detalle; no incorpora intereses, campañas ni integraciones.
 
 ## Interfaz y verificación
 

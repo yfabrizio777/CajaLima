@@ -14,6 +14,7 @@ export function Cart({
   onPayment,
   onClear,
   onSubmit,
+  creditError,
 }: {
   lines: CartLine[]
   payment: PaymentMethod
@@ -24,6 +25,7 @@ export function Cart({
   onPayment: (v: PaymentMethod) => void
   onClear: () => void
   onSubmit: () => void
+  creditError: string
 }) {
   const total = cartTotal(lines)
   return (
@@ -113,7 +115,12 @@ export function Cart({
       </p>
       <button
         className="button button-primary register-sale"
-        disabled={busy || !lines.length || total > 999999999999.99}
+        disabled={
+          busy ||
+          !lines.length ||
+          total > 999999999999.99 ||
+          Boolean(creditError)
+        }
         onClick={onSubmit}
       >
         {busy
@@ -122,6 +129,11 @@ export function Cart({
             ? 'Comprobar y reintentar'
             : 'Registrar venta'}
       </button>
+      {creditError && (
+        <p role="alert" className="field-error">
+          {creditError}
+        </p>
+      )}
     </section>
   )
 }

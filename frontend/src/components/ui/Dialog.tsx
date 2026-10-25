@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useId } from 'react'
 import type { ReactNode } from 'react'
 import { Icon } from './Icon'
 export function Dialog({
@@ -13,6 +13,7 @@ export function Dialog({
   busy?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
   useEffect(() => {
     const previous = document.activeElement
     const dialog = ref.current
@@ -26,14 +27,14 @@ export function Dialog({
     <dialog
       ref={ref}
       className="product-dialog"
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault()
         if (!busy) onClose()
       }}
     >
       <header className="dialog-header">
-        <h2 id="dialog-title">{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button
           className="icon-button"
           type="button"

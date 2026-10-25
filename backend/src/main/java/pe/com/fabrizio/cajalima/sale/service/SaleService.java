@@ -19,6 +19,7 @@ import pe.com.fabrizio.cajalima.sale.repository.*;
 import pe.com.fabrizio.cajalima.shared.exception.ApiException;
 import pe.com.fabrizio.cajalima.customer.domain.Customer;
 import pe.com.fabrizio.cajalima.customer.repository.CustomerRepository;
+import pe.com.fabrizio.cajalima.account.service.CustomerAccountService;
 
 @Service
 @Transactional(readOnly = true)
@@ -31,9 +32,11 @@ public class SaleService {
     private final ProductRepository products;
     private final InventoryMovementRepository movements;
     private final CustomerRepository customers;
-    public SaleService(SaleRepository sales, SaleItemRepository items, ProductRepository products, InventoryMovementRepository movements, CustomerRepository customers) {
+    private final CustomerAccountService accounts;
+    public SaleService(SaleRepository sales, SaleItemRepository items, ProductRepository products, InventoryMovementRepository movements, CustomerRepository customers, CustomerAccountService accounts) {
         this.sales = sales; this.items = items; this.products = products; this.movements = movements;
         this.customers = customers;
+        this.accounts = accounts;
     }
     private SaleResponse response(Sale sale) { return SaleResponse.from(sale, items.findBySaleIdOrderById(sale.getId())); }
     public SaleResponse get(Long id) { return response(sales.findById(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Venta no encontrada."))); }
@@ -67,6 +70,8 @@ public class SaleService {
 
     @Transactional
     public SaleResponse create(CreateSaleRequest request, Long actor) {
+        if(request.paymentMethod()==PaymentMethod.CREDIT && request.customerId()==null)
+            throw error(HttpStatus.BAD_REQUEST,"Selecciona un cliente para registrar una venta fiada.");
         var ordered = request.items().stream().sorted(Comparator.comparing(CreateSaleRequest.Item::productId)).toList();
         if (ordered.stream().map(CreateSaleRequest.Item::productId).distinct().count() != ordered.size())
             throw error(HttpStatus.BAD_REQUEST, "Agrupa las cantidades de cada producto en una sola línea.");
@@ -99,6 +104,8 @@ public class SaleService {
             total = total.add(p.getSalePrice().multiply(BigDecimal.valueOf(quantity)));
         }
         if (total.compareTo(MAX_TOTAL) > 0) throw error(HttpStatus.BAD_REQUEST, "El importe supera el límite permitido para una venta.");
+        if(request.paymentMethod()==PaymentMethod.CREDIT && total.signum()<=0)
+            throw error(HttpStatus.BAD_REQUEST,"La venta fiada debe tener un importe mayor a cero.");
         Sale sale = sales.saveAndFlush(new Sale(request.requestId(), fingerprint, total, request.paymentMethod(), actor, customer));
         for (int i = 0; i < locked.size(); i++) {
             Product p = locked.get(i);
@@ -108,6 +115,7 @@ public class SaleService {
             p.adjustStock(p.getStock() - quantity);
         }
         products.flush();
+        if(request.paymentMethod()==PaymentMethod.CREDIT) accounts.recordCredit(customer.getId(),sale.getId(),total,actor);
         return response(sale);
     }
     private SaleResponse replay(Sale sale, Long actor, String fingerprint) {

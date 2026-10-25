@@ -53,3 +53,14 @@ Comandos frontend desde `frontend/`; pruebas de navegador con Playwright CLI y a
 - Reutilizar CustomerForm en POS sin perder carrito; cliente y referencia bloqueados ante respuesta incierta.
 - Probar venta asociada, Público general, historial, permisos, concurrencia e idempotencia; Playwright/axe con esquemas temporales y hasta dos capturas nuevas.
 - Sin cambios de dependencias ni avances a Fiados; Strix conserva su gate previo al despliegue público.
+
+## Fiados y saldos pendientes
+
+- V6 aditiva; V1–V5 intactas. Ledger CREDIT/PAYMENT sin saldo editable ni ajustes; cantidades positivas BigDecimal/NUMERIC y acumulados exactos.
+- CREDIT requiere cliente activo, total del servidor y transacción común con venta/items/inventario; FK compuesta comprueba la correspondencia financiera con la venta.
+- Pagos con UUID único y fingerprint de cliente/importe/medio/nota, actor del JWT. Validar saldo bajo el bloqueo de cliente compartido con ventas/status.
+- Ambos roles operan y consultan; no permitir acceso anónimo, sobrepago, saldo negativo, mass assignment ni edición/borrado de movimientos por API.
+- Conservar el intento de pago incierto en sessionStorage por actor/cliente, nunca JWT/saldo/ficha completa; recuperar en la misma pestaña incluso tras autenticarse de nuevo y limpiar al resolver.
+- Account no importa servicios/clases Sale; Sale orquesta el movimiento dentro de su propia transacción. Sin dependencias nuevas ni upgrades.
+- Verificar rollback financiero, dos pagos concurrentes, reintentos y acumulados grandes; Playwright/axe sobre esquemas temporales y hasta dos capturas nuevas.
+- Gastos/Compras, Reportes y deploy público fuera de alcance. Strix sigue siendo gate antes de deploy público.
