@@ -7,7 +7,6 @@ import { Icon } from '../ui/Icon'
 import type { IconName } from '../ui/Icon'
 
 const modules: { name: string; icon: IconName }[] = [
-  { name: 'Gastos', icon: 'receipt' },
   { name: 'Reportes', icon: 'chart' },
 ]
 
@@ -46,6 +45,14 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Icon name="people" />
         <span>Clientes</span>
+      </NavLink>
+      <NavLink
+        to="/app/expenses"
+        className={({ isActive }) => (isActive ? 'nav-active' : 'nav-link')}
+        onClick={onNavigate}
+      >
+        <Icon name="receipt" />
+        <span>Gastos</span>
       </NavLink>
       {modules.map((module) => (
         <div key={module.name} className="nav-future" aria-disabled="true">
@@ -126,7 +133,9 @@ export function AppLayout() {
                   ? 'Ventas'
                   : pathname.startsWith('/app/customers')
                     ? 'Clientes'
-                    : 'Inicio'}
+                    : pathname.startsWith('/app/expenses')
+                      ? 'Gastos y compras'
+                      : 'Inicio'}
             </strong>
           </div>
           <div className="topbar-right">

@@ -131,7 +131,7 @@ Requiere Node.js 22.12 o posterior. Abre `http://127.0.0.1:5173`. La ruta `/setu
 
 `VITE_API_URL` es configuración pública, nunca un secreto; su valor predeterminado es `/api`. Vite reenvía esa ruta al backend local mediante un único proxy. Opcionalmente puedes definir `VITE_API_URL` y `VITE_PROXY_TARGET` en `frontend/.env.local`, ignorado por Git. No se necesita crear ningún archivo de entorno para los valores locales predeterminados.
 
-El JWT vive únicamente en memoria de React Context: reduce la persistencia y exposición frente a XSS respecto a localStorage, pero no evita que un XSS activo comprometa una sesión. Al recargar completamente o cerrar la pestaña, se pierde la sesión. La sesión no se guarda en localStorage, sessionStorage, cookies ni URL. Solo la intención de un pago pendiente se conserva en sessionStorage de la pestaña, sin JWT, para reintentar con la misma referencia. Una versión futura podrá evaluar cookies HttpOnly; el backend actual mantiene Bearer JWT.
+El JWT vive únicamente en memoria de React Context: reduce la persistencia y exposición frente a XSS respecto a localStorage, pero no evita que un XSS activo comprometa una sesión. Al recargar completamente o cerrar la pestaña, se pierde la sesión. La sesión no se guarda en localStorage, sessionStorage, cookies ni URL. Las intenciones pendientes de pagos, gastos y compras se conservan en sessionStorage de la pestaña, sin JWT, para reintentar con la misma referencia. Una versión futura podrá evaluar cookies HttpOnly; el backend actual mantiene Bearer JWT.
 
 Para despliegue, compila con `npm run build` y sirve `frontend/dist` mediante HTTPS, con fallback de las rutas de la SPA a `index.html` y proxy `/api` al backend. Configura las cabeceras de seguridad, incluida CSP, en ese servidor. Vite es el servidor de desarrollo. Los valores `VITE_*` se incorporan al código público durante la compilación.
 
@@ -158,6 +158,10 @@ V4 crea `customers` sin cambiar V1–V3. El listado usa tabla en desktop y tarje
 ## Fiados y saldos pendientes
 
 En el POS puedes elegir «Fiado» con un cliente activo. La venta descuenta stock y genera deuda en la misma transacción. En el detalle del cliente, «Saldo pendiente» permite registrar pagos parciales o totales en efectivo, Yape, Plin o transferencia, y consultar movimientos con fecha, referencia y autor. El saldo se deriva del historial; no se edita ni admite pagos superiores a la deuda. Cada pago tiene una referencia para reintentos, recuperable en la misma pestaña tras recargar y autenticar al mismo usuario. No hay intereses, cuotas ni cobranza automática. Consulta [fiados y cuentas](docs/accounts.md).
+
+## Gastos y compras
+
+En `/app/expenses`, ADMIN y EMPLOYEE registran gastos operativos y compras de mercadería, con medio de pago manual, fecha y notas. Los gastos tienen categorías sencillas; las compras admiten proveedor opcional, cantidades y costos por producto, y aumentan stock automáticamente mediante movimientos PURCHASE. Solo ADMIN corrige datos descriptivos; los importes no se editan ni se eliminan registros financieros. El dashboard muestra gastos y compras de hoy según su fecha registrada en Perú. Consulta [el contrato y los límites](docs/spending.md) y [la verificación](docs/verification.md).
 
 ## Detener el proyecto
 
@@ -189,7 +193,7 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] Asociación cliente ↔ venta
 - [x] Fiados y saldos pendientes
 - [ ] Reportes
-- [ ] Gastos y compras
+- [x] Gastos y compras
 - [ ] Integraciones futuras
 - [x] Pruebas E2E de autenticación
 - [ ] Security gate Strix

@@ -10,6 +10,7 @@ import { SalesPage } from '../features/sales/SalesPage'
 import { SalesHistoryPage } from '../features/sales/SalesHistoryPage'
 import { NotFoundPage } from './NotFoundPage'
 import { CustomersPage } from '../features/customers/CustomersPage'
+import { ExpensesPage } from '../features/spending/ExpensesPage'
 
 function PrivateRoute() {
   return useAuth().user ? <Outlet /> : <Navigate to="/login" replace />
@@ -26,6 +27,7 @@ export function AppRouter() {
       '/app/sales': 'Ventas',
       '/app/sales/history': 'Ventas registradas',
       '/app/customers': 'Clientes',
+      '/app/expenses': 'Gastos y compras',
     }
     document.title = `${titles[pathname] || 'CajaLima'} · Tu negocio, más claro.`
     document.getElementById('main')?.focus()
@@ -43,6 +45,7 @@ export function AppRouter() {
           <Route path="sales" element={<SalesPage />} />
           <Route path="sales/history" element={<SalesHistoryPage />} />
           <Route path="customers" element={<CustomersPage />} />
+          <Route path="expenses" element={<ExpensesPage />} />
         </Route>
         <Route path="/app/*" element={<NotFoundPage />} />
       </Route>

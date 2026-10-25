@@ -6,7 +6,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "inventory_movements")
 public class InventoryMovement {
-    public enum Type { INITIAL, ADJUSTMENT, SALE }
+    public enum Type { INITIAL, ADJUSTMENT, SALE, PURCHASE }
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @Column(name = "product_id", nullable = false) private Long productId;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private Type type;
@@ -17,7 +17,13 @@ public class InventoryMovement {
     @Column(name = "created_by", nullable = false) private Long createdBy;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "sale_id") private Long saleId;
+    @Column(name = "purchase_id") private Long purchaseId;
     protected InventoryMovement() { }
+    public static InventoryMovement purchase(Long productId, int previous, int next, Long actor, Long purchaseId) {
+        InventoryMovement movement = new InventoryMovement(productId, Type.PURCHASE, previous, next, "Compra #" + purchaseId, actor);
+        movement.purchaseId = purchaseId;
+        return movement;
+    }
     public static InventoryMovement sale(Long productId, int previous, int next, Long actor, Long saleId) {
         InventoryMovement movement = new InventoryMovement(productId, Type.SALE, previous, next, "Venta #" + saleId, actor);
         movement.saleId = saleId;

@@ -64,3 +64,14 @@ Comandos frontend desde `frontend/`; pruebas de navegador con Playwright CLI y a
 - Account no importa servicios/clases Sale; Sale orquesta el movimiento dentro de su propia transacción. Sin dependencias nuevas ni upgrades.
 - Verificar rollback financiero, dos pagos concurrentes, reintentos y acumulados grandes; Playwright/axe sobre esquemas temporales y hasta dos capturas nuevas.
 - Gastos/Compras, Reportes y deploy público fuera de alcance. Strix sigue siendo gate antes de deploy público.
+
+## Gastos y compras
+
+- V7 aditiva; V1–V6 intactas. Gastos y compras separados, con auditoría, dinero BigDecimal/NUMERIC y respuestas decimales exactas.
+- Compras de productos activos: bloqueo de productos ordenado compartido con ventas/ajustes, validación del stock máximo y transacción común para compra/items/stock/PURCHASE; rollback completo probado.
+- Referencia PURCHASE exclusiva y positiva, sin alterar invariantes SALE/INITIAL/ADJUSTMENT. Snapshots de costo/nombre; no modificar automáticamente costo de catálogo.
+- ADMIN/EMPLOYEE crean/consultan; solo ADMIN corrige descripción, notas y proveedor. No eliminar ni modificar campos financieros por API.
+- UUID/fingerprint por solicitud y actor, conservar la referencia ante incertidumbre/409. sessionStorage limitado al intento, nunca a la sesión JWT.
+- Listados paginados, filtros literales acotados y métricas por fecha de negocio en America/Lima; sin reportes avanzados ni proveedores complejos.
+- Pruebas con esquemas exclusivos y limpieza precisa; conservar instancias preexistentes. Hasta dos capturas nuevas; eje responsive/axe y dependencias sin cambios.
+- Strix pendiente por entorno no equivale a aprobado; obligatorio antes de deploy público.

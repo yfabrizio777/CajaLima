@@ -10,6 +10,7 @@ import { Storefront } from '../../components/ui/Storefront'
 import { Icon } from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { useAuth } from '../auth/AuthContext'
+import { SpendingMetrics } from '../spending/SpendingMetrics'
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -103,7 +104,7 @@ export function DashboardPage() {
       </div>
       <section
         className="metrics-grid"
-        aria-label="Resumen de productos y ventas de hoy"
+        aria-label="Resumen de productos, ventas, gastos y compras de hoy"
       >
         {metrics.map((metric, index) => (
           <article
@@ -120,6 +121,7 @@ export function DashboardPage() {
             <span className="metric-foot">{metric.foot}</span>
           </article>
         ))}
+        <SpendingMetrics />
       </section>
       <div className="dashboard-content">
         <section className="empty-panel">

@@ -16,6 +16,162 @@ import {
   validatePayment,
 } from '../src/features/accounts/types.ts'
 import { creditSaleError } from '../src/features/sales/creditValidation.ts'
+import {
+  validateSpending,
+  purchaseTotal,
+  parseSpendingPage,
+  initialSpending,
+  parseDetail,
+} from '../src/features/spending/types.ts'
+import {
+  readIntent,
+  saveIntent,
+  clearIntent,
+} from '../src/features/spending/intent.ts'
+
+test('gastos validan monto categoria fecha y medio manual', () => {
+  const values = {
+    ...initialSpending(),
+    description: 'Movilidad',
+    amount: '12.50',
+    category: 'TRANSPORT',
+  }
+  assert.deepEqual(validateSpending('expenses', values), {})
+  for (const amount of ['0', '-1', '1.001', '1e2', '1000000000000'])
+    assert.ok(validateSpending('expenses', { ...values, amount }).amount)
+  assert.ok(
+    validateSpending('expenses', { ...values, paymentMethod: 'CREDIT' })
+      .paymentMethod,
+  )
+  assert.ok(
+    validateSpending('expenses', { ...values, date: '2026-02-30' }).date,
+  )
+  assert.ok(
+    validateSpending('expenses', { ...values, category: 'BAD' }).category,
+  )
+})
+test('compras calculan centimos y validan lineas duplicadas limites y cantidades', () => {
+  const values = {
+    ...initialSpending(),
+    description: 'Reposición',
+    items: [
+      { productId: 1, productName: 'Arroz', quantity: '3', unitCost: '0.10' },
+    ],
+  }
+  assert.equal(purchaseTotal(values.items), '0.30')
+  assert.deepEqual(validateSpending('purchases', values), {})
+  assert.ok(validateSpending('purchases', { ...values, items: [] }).items)
+  assert.ok(
+    validateSpending('purchases', {
+      ...values,
+      items: [...values.items, ...values.items],
+    }).items,
+  )
+  for (const quantity of ['0', '-1', '1.5', '1000001'])
+    assert.ok(
+      validateSpending('purchases', {
+        ...values,
+        items: [{ ...values.items[0]!, quantity }],
+      }).items,
+    )
+  assert.ok(
+    validateSpending('purchases', {
+      ...values,
+      items: [
+        { ...values.items[0]!, quantity: '1000000', unitCost: '99999999.99' },
+      ],
+    }).items,
+  )
+})
+test('listados financieros admiten vacio y rechazan respuestas invalidas', () => {
+  assert.deepEqual(
+    parseSpendingPage('expenses', { items: [], total: 0, page: 0, size: 20 })
+      .items,
+    [],
+  )
+  assert.throws(() =>
+    parseSpendingPage('expenses', {
+      items: [{ amount: '-1' }],
+      total: 1,
+      page: 0,
+      size: 20,
+    }),
+  )
+})
+test('contrato de compra verifica subtotales total y snapshots sin exponer internos', () => {
+  const purchase = {
+    id: 1,
+    description: 'Reposición',
+    supplierName: null,
+    total: '0.30',
+    paymentMethod: 'YAPE',
+    purchaseDate: '2026-10-25',
+    notes: null,
+    createdBy: 2,
+    createdAt: '2026-10-25T12:00:00Z',
+    updatedAt: '2026-10-25T12:00:00Z',
+    requestFingerprint: 'interno',
+  }
+  const items = [
+    {
+      id: 1,
+      productId: 3,
+      productName: 'Arroz',
+      quantity: 3,
+      unitCost: '0.10',
+      subtotal: '0.30',
+    },
+  ]
+  const detail = parseDetail('purchases', { purchase, items })
+  assert.equal(detail.record.amount, '0.30')
+  assert.equal('requestFingerprint' in detail.record, false)
+  assert.throws(() =>
+    parseDetail('purchases', {
+      purchase: { ...purchase, total: '0.31' },
+      items,
+    }),
+  )
+  assert.throws(() =>
+    parseDetail('purchases', {
+      purchase,
+      items: [{ ...items[0]!, subtotal: '0.29' }],
+    }),
+  )
+})
+test('intencion financiera conserva UUID y payload por actor y modulo hasta resolver', () => {
+  const storage = new Map<string, string>()
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+    },
+  })
+  const intent = {
+    requestId: '11111111-1111-4111-8111-111111111111',
+    values: { ...initialSpending(), description: 'Movilidad', amount: '12.50' },
+  }
+  saveIntent(1, 'expenses', intent)
+  assert.deepEqual(readIntent(1, 'expenses'), intent)
+  assert.equal(readIntent(2, 'expenses'), null)
+  assert.equal(readIntent(1, 'purchases'), null)
+  assert.equal(JSON.stringify([...storage.values()]).includes('token'), false)
+  clearIntent(1, 'expenses')
+  assert.equal(readIntent(1, 'expenses'), null)
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    value: {
+      getItem: () => '{invalid',
+      setItem: () => {
+        throw new Error('disabled')
+      },
+      removeItem: () => {},
+    },
+  })
+  assert.equal(readIntent(1, 'expenses'), null)
+  assert.throws(() => saveIntent(1, 'expenses', intent))
+})
 
 test('fiado requiere cliente y solo admite importe positivo', () => {
   assert.equal(salePayments.CREDIT, 'Fiado')

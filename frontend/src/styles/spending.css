@@ -1,0 +1,119 @@
+@layer components {
+  .spending-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .spending-tabs a {
+    min-height: 44px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: white;
+    font-weight: 600;
+  }
+  .spending-tabs a[aria-current='page'] {
+    color: white;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+  .spending-filters {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .spending-cards {
+    display: grid;
+    gap: 16px;
+  }
+  .spending-card header span {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    display: block;
+    margin-bottom: 8px;
+    overflow-wrap: anywhere;
+  }
+  .spending-card h2,
+  .spending-description,
+  .spending-data dd {
+    overflow-wrap: anywhere;
+  }
+  .spending-data {
+    display: grid;
+    gap: 16px;
+    margin-block: 24px;
+  }
+  .spending-data dt {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    margin-bottom: 4px;
+  }
+  .purchase-lines h3 {
+    margin-block: 16px;
+  }
+  .purchase-options {
+    display: grid;
+    gap: 8px;
+    max-height: 180px;
+    overflow: auto;
+    margin-bottom: 16px;
+  }
+  .purchase-options button {
+    min-height: 44px;
+    text-align: left;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 12px;
+    overflow-wrap: anywhere;
+  }
+  .purchase-line {
+    padding: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: white;
+    margin-block: 12px;
+    overflow-wrap: anywhere;
+  }
+  .purchase-line .field {
+    margin-top: 12px;
+  }
+  .purchase-line .text-button {
+    min-height: 44px;
+    text-decoration: underline;
+    color: var(--color-primary);
+  }
+  .purchase-total {
+    display: grid;
+    gap: 12px;
+    margin-block: 20px;
+  }
+  .purchase-total > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .purchase-total > div:last-child {
+    font-weight: 700;
+  }
+  .spending-filters .field {
+    margin-bottom: 0;
+    min-width: 0;
+  }
+}
+@media (min-width: 600px) {
+  .spending-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .spending-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1200px) {
+  .spending-filters {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+  }
+  .spending-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

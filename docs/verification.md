@@ -1,5 +1,46 @@
 # Verificación de CajaLima
 
+## Gastos y compras — 25/10/2026
+
+Base: `6623609`. V7 agrega gastos, compras/items y referencias PURCHASE; V1–V6 y dependencias intactas. Java 21 LTS, Node 24.22.1 y npm 11.19.1 verificados.
+
+| Comprobación | Resultado |
+| --- | --- |
+| `mvn clean test` | 141 pruebas, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS |
+| Backend nuevo | 23 pruebas: validación, actor/roles, filtros/paginación, dinero, idempotencia, edición descriptiva, constraints, rollback y concurrencia |
+| Concurrencia | Compras simultáneas suman sin pérdida; compras con venta/ajuste conservan la cadena de stock; orden inverso de productos no bloquea; referencia global no duplica |
+| Rollback | Fallo inyectado en movimiento PURCHASE revierte compra, items, movimientos y stock |
+| `npm test` | 27 pruebas, 0 fallos/omitidas; incluye contratos exactos, total preliminar, vacíos y almacenamiento del intento |
+| Lint/build/format | Correctos, sin supresiones ni cambios de dependencias |
+| Auditorías npm | `npm audit` y `npm audit --omit=dev`: 0 vulnerabilities |
+| Playwright real | ADMIN y EMPLOYEE registran compra de 10 unidades y gasto de 12.50; stock final 25 desde 5; dashboard muestra gastos 25.00 y compras 50.00 |
+| Reintentos | Commit real seguido de aborto de respuesta, reload/login, 409 intermedio y recuperación con el UUID original para compra y gasto; solo dos compras y dos gastos al terminar |
+| Edición | ADMIN corrige descripción de compra sin cambiar total/stock; EMPLOYEE no tiene acción de edición y recibe 403 por API |
+| Axe/responsive | 14 comprobaciones, 0 infracciones detectadas y sin overflow: formularios/listados de ambos módulos en 375×812, 768×1024, 1366×768, más vacío y dashboard empleado |
+| JavaScript | 0 errores inesperados; primer error enfocado; intentos sin JWT en sessionStorage por actor/recurso |
+| Graphify AST | Backend 633 nodos/1375 aristas; frontend 281/961; sin ciclos de imports |
+| Limpieza | Navegador, backend 8081 y Vite temporales cerrados; dos esquemas exclusivos eliminados; PostgreSQL healthy en 127.0.0.1:5433 |
+
+Las primeras pruebas fallaron con 404 antes de implementar gastos/compras; después pasaron. Revisión independiente del diseño y del código detectó y corrigió la pérdida de UUID ante 409. El recorrido real comprueba esta regresión. Revisión final de la corrección sin defectos sustantivos pendientes. No se ejecutó una segunda revisión con CLI externo.
+
+Graphify confirma `ExpenseController → ExpenseService → ExpenseRepository` y `PurchaseController → PurchaseService → ProductRepository/InventoryMovementRepository`, además de `ExpensesPage/PurchasesPage → SpendingList → spending/api.ts`. La entrada PURCHASE usa `ProductRepository.findLocked`. HTTP y PostgreSQL se verificaron mediante integración, sin inventar aristas AST entre lenguajes. Grafos locales ignorados, sin LLM.
+
+**Instancia local preexistente:** 8080 estaba ocupado por CajaLima con DevTools, que aplicó V7 a public al recargar los archivos compilados. No se revirtió una migración aplicada. Public conserva 1 usuario, 0 productos, 0 ventas, 0 gastos y 0 compras; ningún dato ficticio del navegador fue creado allí. La instancia original se conservó. Las pruebas Maven usaron esquemas propios y el arranque general `spending_smoke_<id>`; el navegador usó `spending_browser_<id>`. El backend temporal se ejecutó en 8081 por ese conflicto real, Vite en 5173, con proxy por variable de proceso; la configuración versionada sigue en 8080/5173/5433. No se utilizó 8180 ni se borraron volúmenes.
+
+Flujo reproducible: `frontend/tests/spending-browser-flow.js`. Iniciar un backend con esquema nuevo/exclusivo y las tres variables de aislamiento descritas abajo, JWT temporal y DevTools deshabilitado. Si 8080 está libre, usarlo; si lo ocupa una instancia ajena al ensayo, usar un puerto temporal libre y ajustar `VITE_PROXY_TARGET` solo para Vite. Desde raíz:
+
+```powershell
+playwright-cli.cmd -s=cajalima-spending open http://127.0.0.1:5173/login
+$flow = [IO.File]::ReadAllText((Join-Path (Get-Location) 'frontend/tests/spending-browser-flow.js')).Replace('export default ', '')
+[IO.File]::WriteAllText((Join-Path (Get-Location) 'spending-browser-flow.tmp'), $flow)
+playwright-cli.cmd -s=cajalima-spending --raw run-code --filename=spending-browser-flow.tmp
+playwright-cli.cmd -s=cajalima-spending close
+```
+
+El flujo exige setup vacío, genera cuentas ficticias y no imprime JWT/contraseñas. Capturas revisadas: `gastos-desktop.png` y `compras-mobile.png`. Limpiar únicamente el esquema nuevo al terminar; preservar instancias y datos anteriores.
+
+Strix reconoce autenticación, pero `STRIX_LLM` sigue sin definir: pentest pendiente, obligatorio antes del despliegue público. Las auditorías npm de esta fase ya están en cero; los avisos históricos de Vite/source-map-js de secciones anteriores fueron resueltos por `6623609`. Contrato, límites y decisiones: [gastos y compras](spending.md).
+
 ## Fiados y saldos pendientes — 25/10/2026
 
 Base: `2a15625`. V6 crea el ledger; V1–V5 y dependencias permanecen intactos.
