@@ -1,5 +1,44 @@
 # Verificación de CajaLima
 
+## Asociación cliente y venta — 25/10/2026
+
+Base: `84fd38c`. V5 agrega la FK nullable; V1–V4 y dependencias permanecen intactas.
+
+| Comprobación | Resultado |
+| --- | --- |
+| `mvn clean test` | 100 pruebas, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS |
+| Distribución | 88 anteriores + 11 de asociación/ventas + 1 de búsqueda activa para POS |
+| `npm test` | 17 pruebas, 0 fallos, 0 omitidas |
+| Lint, build, format:check | Correctos, sin deshabilitar reglas ni pruebas |
+| Idempotencia | Cliente incluido en huella; cambiar/quitar cliente con la misma referencia recibe 409; null conserva huella anterior; reintento simultáneo devuelve una sola venta |
+| Stock y rollback | Pasan todas las pruebas anteriores y nueva última unidad con distintos clientes; venta inválida no consume existencias |
+| Playwright real | ADMIN crea María, producto, venta Yape y consulta monto/medio del historial; venta a Público general excluida; EMPLOYEE vende y consulta; alta rápida selecciona y conserva carrito |
+| Respuesta perdida | Se confirmó la venta en el backend y se abortó su respuesta; el reintento mantuvo cliente/requestId y devolvió el mismo ID sin duplicar |
+| Axe y responsive | 11 comprobaciones, 0 infracciones WCAG detectadas, sin overflow horizontal; selector/POS/historial a 375×812, 768×1024 y 1366×768, más empleado y vacío |
+| JavaScript | 0 errores inesperados; sin cookies, localStorage ni sessionStorage de sesión |
+| Graphify AST | Backend 408 nodos/887 aristas; frontend 194/612. Ningún ciclo de imports detectado |
+| Datos principales | public conservó V1–V3, 1 usuario, 0 productos, 0 ventas y ausencia de customers. V4/V5 solo se aplicaron en esquemas temporales |
+
+Revisión manual: FK customer_id con acción NO ACTION, sin cascade JPA; respuesta de venta limitada a id/nombre/documento; inexistente 404 e inactivo 409; ambos roles autorizados a consultar el historial del único negocio. No se agrega aislamiento multiempresa inexistente. Cliente bloqueado antes de productos y reconsulta de referencia tras adquirir bloqueos; Customer no importa Sale. No se agrega summary avanzado.
+
+Antes de implementar, la prueba de venta asociada falló con 400; después pasó. La prueba de compatibilidad frontend detectó la ausencia de customer null antes del cambio. Durante revisión se retiró temporalmente el cliente del fingerprint: la prueba detectó 201 donde debía recibir 409. Se restauró la regla y se ejecutó la suite completa final.
+
+Graphify confirmó `SalesPage.tsx → CustomerPicker.tsx` por imports, CustomerPicker → useCustomersApi, `SalesPage.tsx → sales/api.ts`, `CustomerDetail.tsx → CustomerPurchaseHistory.tsx` y CustomerPurchaseHistory → useCustomersApi. Backend: SaleService → CustomerRepository y CustomerSalesController → SaleService → SaleRepository. Los enlaces HTTP entre lenguajes y la FK/persistencia PostgreSQL se verificaron mediante pruebas reales; no se inventan aristas AST para esos pasos. Grafos locales ignorados por Git y sin uso de LLM.
+
+`frontend/tests/customer-sales-browser-flow.js` es el flujo reproducible. Usa el mismo esquema aislado/configuración de la sección Clientes; en esta fase se usaron `association_browser_<id>` y `association_smoke_<id>` para que tampoco el test general de arranque migrara public. Desde raíz, con backend temporal 8080 y Vite 5173:
+
+```powershell
+playwright-cli.cmd -s=cajalima-association open http://127.0.0.1:5173/login
+$flow = [IO.File]::ReadAllText((Join-Path (Get-Location) 'frontend/tests/customer-sales-browser-flow.js')).Replace('export default ', '')
+[IO.File]::WriteAllText((Join-Path (Get-Location) 'customer-sales-browser-flow.tmp'), $flow)
+playwright-cli.cmd -s=cajalima-association --raw run-code --filename=customer-sales-browser-flow.tmp
+playwright-cli.cmd -s=cajalima-association close
+```
+
+Se revisaron visualmente `cliente-compras-desktop.png` y `cliente-compras-mobile.png`, con datos ficticios. Las instancias y el navegador se cerraron y los dos esquemas temporales se eliminaron. Docker/PostgreSQL permanecieron activos en 127.0.0.1:5433. No se utilizó 8180 ni se borraron volúmenes.
+
+Strix: `auth status` reconoce la suscripción, pero STRIX_LLM continúa sin definir; pentest pendiente, no bloqueante para esta fase y obligatorio antes de despliegue público. No se actualizaron dependencias; los avisos previos de herramientas de desarrollo permanecen documentados, fuera del alcance de esta asociación.
+
 ## Clientes — 25/10/2026
 
 Base: `a8abc87`. V4 agrega clientes; V1–V3 no se modifican. Sin cambios de versiones ni asociación con ventas.

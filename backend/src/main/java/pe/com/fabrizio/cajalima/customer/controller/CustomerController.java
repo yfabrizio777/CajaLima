@@ -13,9 +13,9 @@ public class CustomerController {
     private final CustomerService customers;
     public CustomerController(CustomerService customers) { this.customers = customers; }
     public record StatusRequest(@NotNull Boolean active) { }
-    @GetMapping public CustomerService.CustomerPage list(@RequestParam(defaultValue = "") String search,
+    @GetMapping public CustomerService.CustomerPage list(@RequestParam(defaultValue = "") String search, @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return customers.list(search, page, size);
+        return customers.list(search, active, page, size);
     }
     @GetMapping("/{id}") public CustomerResponse get(@PathVariable Long id) { return customers.get(id); }
     @PostMapping @ResponseStatus(HttpStatus.CREATED)

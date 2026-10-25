@@ -3,6 +3,7 @@ import { Dialog } from '../../components/ui/Dialog'
 import { useCustomersApi } from './api'
 import { customerDocument } from './types'
 import type { Customer } from './types'
+import { CustomerPurchaseHistory } from './CustomerPurchaseHistory'
 
 export function CustomerDetail({
   id,
@@ -48,22 +49,25 @@ export function CustomerDetail({
       ) : !customer ? (
         <output>Consultando cliente…</output>
       ) : (
-        <dl className="customer-detail">
-          {Object.entries({
-            Cliente: customer.name,
-            Documento: customerDocument(customer),
-            Teléfono: customer.phone || 'Sin teléfono',
-            Estado: customer.active ? 'Activo' : 'Inactivo',
-            Correo: customer.email || 'Sin correo',
-            Dirección: customer.address || 'Sin dirección',
-            Nota: customer.notes || 'Sin nota',
-          }).map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <>
+          <dl className="customer-detail">
+            {Object.entries({
+              Cliente: customer.name,
+              Documento: customerDocument(customer),
+              Teléfono: customer.phone || 'Sin teléfono',
+              Estado: customer.active ? 'Activo' : 'Inactivo',
+              Correo: customer.email || 'Sin correo',
+              Dirección: customer.address || 'Sin dirección',
+              Nota: customer.notes || 'Sin nota',
+            }).map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <CustomerPurchaseHistory id={id} onClose={onClose} />
+        </>
       )}
       <div className="dialog-actions">
         <button className="button button-secondary" onClick={onClose}>

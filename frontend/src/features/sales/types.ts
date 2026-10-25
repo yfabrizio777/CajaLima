@@ -1,10 +1,15 @@
-export const payments = {
-  CASH: 'Efectivo',
-  YAPE: 'Yape',
-  PLIN: 'Plin',
-  TRANSFER: 'Transferencia',
-} as const
-export type PaymentMethod = keyof typeof payments
+import { payments } from '../../lib/payments.ts'
+import type { PaymentMethod } from '../../lib/payments.ts'
+import { isDocumentType } from '../customers/types.ts'
+import type { DocumentType } from '../customers/types.ts'
+export { payments }
+export type { PaymentMethod }
+export interface SaleCustomer {
+  id: number
+  name: string
+  documentType: DocumentType | null
+  documentNumber: string | null
+}
 export interface SaleRow {
   id: number
   total: number
@@ -21,6 +26,7 @@ export interface SaleItem {
 }
 export interface Sale extends SaleRow {
   items: SaleItem[]
+  customer: SaleCustomer | null
 }
 export interface SalePage {
   items: SaleRow[]
@@ -36,6 +42,7 @@ export interface SaleSummary {
 export interface SaleRequest {
   requestId: string
   paymentMethod: PaymentMethod
+  customerId?: number | null
   items: { productId: number; quantity: number }[]
 }
 function record(v: unknown): v is Record<string, unknown> {
@@ -90,7 +97,34 @@ export function parseSale(v: unknown): Sale {
       subtotal: item.subtotal,
     }
   })
-  return { ...row, items }
+  let customer: SaleCustomer | null = null
+  if (v.customer !== null && v.customer !== undefined) {
+    const c = v.customer
+    if (
+      !record(c) ||
+      !integer(c.id) ||
+      c.id < 1 ||
+      typeof c.name !== 'string' ||
+      !c.name.trim() ||
+      c.name.length > 160 ||
+      !(
+        c.documentType === null ||
+        (typeof c.documentType === 'string' && isDocumentType(c.documentType))
+      ) ||
+      !(
+        c.documentNumber === null ||
+        (typeof c.documentNumber === 'string' && c.documentNumber.length <= 32)
+      )
+    )
+      throw new Error('Cliente de venta inesperado.')
+    customer = {
+      id: c.id,
+      name: c.name,
+      documentType: c.documentType,
+      documentNumber: c.documentNumber,
+    }
+  }
+  return { ...row, items, customer }
 }
 export function parseSales(v: unknown): SalePage {
   if (

@@ -6,6 +6,8 @@ import { Cart } from './Cart'
 import { PosProducts } from './PosProducts'
 import { SaleConfirmation } from './SaleConfirmation'
 import { changeQuantity } from './cartState'
+import { CustomerPicker } from './CustomerPicker'
+import type { Customer } from '../customers/types'
 import type { CartLine } from './cartState'
 import type { PaymentMethod, Sale } from './types'
 import type { Product, ProductPage } from '../products/types'
@@ -23,6 +25,7 @@ export function SalesPage() {
   const [uncertain, setUncertain] = useState(false)
   const [error, setError] = useState('')
   const [confirmed, setConfirmed] = useState<Sale | null>(null)
+  const [customer, setCustomer] = useState<Customer | null>(null)
   const locked = busy || uncertain
   useEffect(() => {
     const controller = new AbortController()
@@ -64,6 +67,7 @@ export function SalesPage() {
       const sale = await api.create({
         requestId,
         paymentMethod: payment,
+        customerId: customer?.id ?? null,
         items: lines.map((line) => ({
           productId: line.product.id,
           quantity: line.quantity,
@@ -72,6 +76,7 @@ export function SalesPage() {
       setConfirmed(sale)
       setLines([])
       setPayment('CASH')
+      setCustomer(null)
       setRequestId(crypto.randomUUID())
       setUncertain(false)
     } catch (e) {
@@ -138,23 +143,35 @@ export function SalesPage() {
             )
           }
         />
-        <Cart
-          lines={lines}
-          payment={payment}
-          locked={locked}
-          busy={busy}
-          uncertain={uncertain}
-          onQuantity={quantity}
-          onPayment={(v) => {
-            setPayment(v)
-            setRequestId(crypto.randomUUID())
-          }}
-          onClear={() => {
-            setLines([])
-            setRequestId(crypto.randomUUID())
-          }}
-          onSubmit={submit}
-        />
+        <div>
+          <CustomerPicker
+            selected={customer}
+            locked={locked}
+            onSelect={(selected) => {
+              if (locked) return
+              if (selected?.id !== customer?.id)
+                setRequestId(crypto.randomUUID())
+              setCustomer(selected)
+            }}
+          />
+          <Cart
+            lines={lines}
+            payment={payment}
+            locked={locked}
+            busy={busy}
+            uncertain={uncertain}
+            onQuantity={quantity}
+            onPayment={(v) => {
+              setPayment(v)
+              setRequestId(crypto.randomUUID())
+            }}
+            onClear={() => {
+              setLines([])
+              setRequestId(crypto.randomUUID())
+            }}
+            onSubmit={submit}
+          />
+        </div>
       </div>
       {confirmed && (
         <SaleConfirmation sale={confirmed} onClose={() => setConfirmed(null)} />

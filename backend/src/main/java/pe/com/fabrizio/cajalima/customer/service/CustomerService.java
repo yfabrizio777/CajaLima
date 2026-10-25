@@ -20,18 +20,19 @@ public class CustomerService {
     private final CustomerRepository customers;
     public CustomerService(CustomerRepository customers) { this.customers = customers; }
     public record CustomerPage(List<CustomerResponse> items, long total, int page, int size) { }
-    public CustomerPage list(String search, int page, int size) {
+    public CustomerPage list(String search, Boolean active, int page, int size) {
         if (search.length() > 160 || page < 0 || page > 100000 || size < 1 || size > 100)
             throw new ApiException(HttpStatus.BAD_REQUEST, "Revisa la búsqueda o la página solicitada.");
         String term = search.replaceAll("(?U)\\s+", " ").strip().toLowerCase(Locale.ROOT);
         Specification<Customer> filter = (root, query, cb) -> {
-            if (term.isBlank()) return cb.conjunction();
+            var status = active == null ? cb.conjunction() : cb.equal(root.get("active"), active);
+            if (term.isBlank()) return status;
             String text = like(term);
             String document = like(term.replace(" ", ""));
             String phone = term.replaceAll("[ ()-]", "");
-            return cb.or(cb.like(cb.lower(root.get("name")), text, '\\'),
+            return cb.and(status, cb.or(cb.like(cb.lower(root.get("name")), text, '\\'),
                     cb.like(cb.lower(root.get("documentNumber")), document, '\\'),
-                    phone.isEmpty() ? cb.disjunction() : cb.like(root.get("phone"), like(phone), '\\'));
+                    phone.isEmpty() ? cb.disjunction() : cb.like(root.get("phone"), like(phone), '\\')));
         };
         var result = customers.findAll(filter, PageRequest.of(page, size, Sort.by("name", "id")));
         return new CustomerPage(result.map(CustomerResponse::from).getContent(), result.getTotalElements(), page, size);

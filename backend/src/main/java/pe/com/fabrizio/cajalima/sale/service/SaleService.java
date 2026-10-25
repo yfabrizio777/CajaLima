@@ -17,6 +17,8 @@ import pe.com.fabrizio.cajalima.sale.domain.*;
 import pe.com.fabrizio.cajalima.sale.dto.*;
 import pe.com.fabrizio.cajalima.sale.repository.*;
 import pe.com.fabrizio.cajalima.shared.exception.ApiException;
+import pe.com.fabrizio.cajalima.customer.domain.Customer;
+import pe.com.fabrizio.cajalima.customer.repository.CustomerRepository;
 
 @Service
 @Transactional(readOnly = true)
@@ -28,8 +30,10 @@ public class SaleService {
     private final SaleItemRepository items;
     private final ProductRepository products;
     private final InventoryMovementRepository movements;
-    public SaleService(SaleRepository sales, SaleItemRepository items, ProductRepository products, InventoryMovementRepository movements) {
+    private final CustomerRepository customers;
+    public SaleService(SaleRepository sales, SaleItemRepository items, ProductRepository products, InventoryMovementRepository movements, CustomerRepository customers) {
         this.sales = sales; this.items = items; this.products = products; this.movements = movements;
+        this.customers = customers;
     }
     private SaleResponse response(Sale sale) { return SaleResponse.from(sale, items.findBySaleIdOrderById(sale.getId())); }
     public SaleResponse get(Long id) { return response(sales.findById(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Venta no encontrada."))); }
@@ -37,6 +41,16 @@ public class SaleService {
         static SaleRow from(Sale sale) { return new SaleRow(sale.getId(), sale.getTotal(), sale.getPaymentMethod(), sale.getCreatedBy(), sale.getCreatedAt()); }
     }
     public record SalePage(List<SaleRow> items, long total, int page, int size) { }
+    public record CustomerSaleRow(Long id, BigDecimal total, PaymentMethod paymentMethod, Instant createdAt) {
+        static CustomerSaleRow from(Sale sale) { return new CustomerSaleRow(sale.getId(), sale.getTotal(), sale.getPaymentMethod(), sale.getCreatedAt()); }
+    }
+    public record CustomerSalePage(List<CustomerSaleRow> items, long total, int page, int size) { }
+    public CustomerSalePage customerSales(Long customerId, int page, int size) {
+        if (page < 0 || page > 100000 || size < 1 || size > 100) throw error(HttpStatus.BAD_REQUEST, "Revisa la página solicitada.");
+        if (!customers.existsById(customerId)) throw error(HttpStatus.NOT_FOUND, "Cliente no encontrado.");
+        var result = sales.findByCustomerId(customerId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")));
+        return new CustomerSalePage(result.map(CustomerSaleRow::from).getContent(), result.getTotalElements(), page, size);
+    }
     public SalePage list(LocalDate date, int page, int size) {
         if (page < 0 || page > 100000 || size < 1 || size > 100) throw error(HttpStatus.BAD_REQUEST, "Revisa la página solicitada.");
         var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id"));
@@ -56,9 +70,19 @@ public class SaleService {
         var ordered = request.items().stream().sorted(Comparator.comparing(CreateSaleRequest.Item::productId)).toList();
         if (ordered.stream().map(CreateSaleRequest.Item::productId).distinct().count() != ordered.size())
             throw error(HttpStatus.BAD_REQUEST, "Agrupa las cantidades de cada producto en una sola línea.");
-        String fingerprint = fingerprint(request.paymentMethod(), ordered);
+        String fingerprint = fingerprint(request.paymentMethod(), ordered, request.customerId());
         var previous = sales.findByRequestId(request.requestId());
         if (previous.isPresent()) return replay(previous.get(), actor, fingerprint);
+
+        // Lock the customer before products so deactivation cannot race with a new association.
+        // A replay above still succeeds when a formerly active customer has since been deactivated.
+        Customer customer = request.customerId() == null ? null : customers.findLocked(request.customerId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Cliente no encontrado."));
+        if (customer != null) {
+            previous = sales.findByRequestId(request.requestId());
+            if (previous.isPresent()) return replay(previous.get(), actor, fingerprint);
+        }
+        if (customer != null && !customer.isActive()) throw error(HttpStatus.CONFLICT, "El cliente seleccionado no está activo.");
 
         // Every stock writer uses the same row lock; sorted IDs prevent opposite-order deadlocks.
         List<Product> locked = new ArrayList<>();
@@ -75,7 +99,7 @@ public class SaleService {
             total = total.add(p.getSalePrice().multiply(BigDecimal.valueOf(quantity)));
         }
         if (total.compareTo(MAX_TOTAL) > 0) throw error(HttpStatus.BAD_REQUEST, "El importe supera el límite permitido para una venta.");
-        Sale sale = sales.saveAndFlush(new Sale(request.requestId(), fingerprint, total, request.paymentMethod(), actor));
+        Sale sale = sales.saveAndFlush(new Sale(request.requestId(), fingerprint, total, request.paymentMethod(), actor, customer));
         for (int i = 0; i < locked.size(); i++) {
             Product p = locked.get(i);
             int quantity = ordered.get(i).quantity();
@@ -91,9 +115,11 @@ public class SaleService {
             throw error(HttpStatus.CONFLICT, "Esta referencia ya corresponde a otra solicitud. Revisa tus ventas.");
         return response(sale);
     }
-    private String fingerprint(PaymentMethod method, List<CreateSaleRequest.Item> ordered) {
+    private String fingerprint(PaymentMethod method, List<CreateSaleRequest.Item> ordered, Long customerId) {
         StringBuilder canonical = new StringBuilder(method.name());
         for (var item : ordered) canonical.append(':').append(item.productId()).append('=').append(item.quantity());
+        // Preserve V3/V4 fingerprints for requests without a customer, including historical retries.
+        if (customerId != null) canonical.append(":customer=").append(customerId);
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(canonical.toString().getBytes(StandardCharsets.UTF_8))); }
         catch (NoSuchAlgorithmException ex) { throw new IllegalStateException("SHA-256 unavailable", ex); }
     }

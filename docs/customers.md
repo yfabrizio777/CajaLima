@@ -13,12 +13,13 @@ ADMIN y EMPLOYEE pueden crear, consultar y editar nombre, documento y datos de c
 | POST `/api/customers` | Cliente activo, 201 |
 | PUT `/api/customers/{id}` | Reemplaza datos básicos; conserva estado y creación |
 | PATCH `/api/customers/{id}/status` | `{active: boolean}`, ADMIN |
+| GET `/api/customers/{id}/sales` | Historial real paginado, ADMIN/EMPLOYEE; implementado por el módulo Sale |
 
 Campos de escritura: `name` (obligatorio, 160), `documentType` (DNI/RUC/CE/OTHER, opcional), `documentNumber` (32), `phone` (32), `email` (180), `address` (240), `notes` (1000). Los demás son opcionales; blancos se convierten en null. Nombre y dirección normalizan espacios; documento elimina espacios y pasa a mayúsculas. Sin tipo y con número se usa OTHER. DNI exige 8 dígitos, RUC 11; CE/OTHER aceptan letras, números y separadores punto, barra y guion. No hay consulta oficial ni verificación de identidad.
 
-La pareja tipo/número es única también entre inactivos, mediante índice único en PostgreSQL; múltiples documentos ausentes y correos compartidos están permitidos. Teléfono admite formato internacional manual; elimina espacios, paréntesis y guiones para buscar por dígitos. Búsqueda literal sin distinguir mayúsculas por nombre, documento o teléfono. No se intenta deduplicar personas solo por nombre.
+La pareja tipo/número es única también entre inactivos, mediante índice único en PostgreSQL; múltiples documentos ausentes y correos compartidos están permitidos. Teléfono admite formato internacional manual; elimina espacios, paréntesis y guiones para buscar por dígitos. Búsqueda literal sin distinguir mayúsculas por nombre, documento o teléfono. No se intenta deduplicar personas solo por nombre. GET acepta `active=true` opcional para seleccionar clientes del POS; sin ese parámetro mantiene activos e inactivos en el listado habitual.
 
-Errores: 400 entrada inválida, 401 sin sesión, 403 sin permiso, 404 inexistente, 409 documento duplicado. No se exponen datos personales en logs. La información pertenece al único negocio de esta versión; no existe multiempresa. No asociar ventas ni implementar créditos, campañas o integraciones en este módulo.
+Errores: 400 entrada inválida, 401 sin sesión, 403 sin permiso, 404 inexistente, 409 documento duplicado. No se exponen datos personales en logs. La información pertenece al único negocio de esta versión; no existe multiempresa. V5 permite la asociación opcional y consulta de compras desde Sale, sin dependencia circular de servicios; ver [ventas](sales.md). No hay créditos, campañas ni integraciones.
 
 ## Interfaz y verificación
 

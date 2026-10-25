@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { parseCustomerPurchases } from '../src/features/customers/purchases.ts'
 import {
   customerBody,
   validateCustomer,
@@ -97,6 +98,38 @@ import {
 } from '../src/features/sales/types.ts'
 import type { Product } from '../src/features/products/types.ts'
 
+test('venta distingue cliente opcional y limita su respuesta a datos básicos', () => {
+  const receipt = {
+    id: 1,
+    total: 3.5,
+    paymentMethod: 'YAPE',
+    createdBy: 1,
+    createdAt: '2026-10-25T12:00:00Z',
+    items: [],
+  }
+  assert.equal(parseSale(receipt).customer, null)
+  assert.equal(parseSale({ ...receipt, customer: null }).customer, null)
+  const customer = {
+    id: 12,
+    name: 'María',
+    documentType: 'DNI',
+    documentNumber: '12345678',
+    notes: 'privado',
+  }
+  assert.deepEqual(parseSale({ ...receipt, customer }).customer, {
+    id: 12,
+    name: 'María',
+    documentType: 'DNI',
+    documentNumber: '12345678',
+  })
+  assert.throws(() =>
+    parseSale({ ...receipt, customer: { ...customer, id: -1 } }),
+  )
+  assert.throws(() =>
+    parseSale({ ...receipt, customer: { ...customer, documentType: 'FAKE' } }),
+  )
+})
+
 const saleProduct: Product = {
   id: 1,
   name: 'Inca Kola',
@@ -110,6 +143,43 @@ const saleProduct: Product = {
   createdAt: '2026-09-14T12:00:00Z',
   updatedAt: '2026-09-14T12:00:00Z',
 }
+test('historial de compras valida paginación y permite clientes sin compras', () => {
+  assert.deepEqual(
+    parseCustomerPurchases({ items: [], total: 0, page: 0, size: 10 }).items,
+    [],
+  )
+  const purchase = {
+    id: 3,
+    total: 7,
+    paymentMethod: 'YAPE',
+    createdAt: '2026-10-25T12:00:00Z',
+    items: ['innecesarios'],
+  }
+  const result = parseCustomerPurchases({
+    items: [purchase],
+    total: 1,
+    page: 0,
+    size: 10,
+  })
+  assert.equal(result.items[0]?.total, 7)
+  assert.equal('items' in result.items[0]!, false)
+  for (const invalid of [
+    { total: -1 },
+    { size: 0 },
+    { page: 0.5 },
+    { items: [{ ...purchase, paymentMethod: 'CARD' }] },
+    { items: [{ ...purchase, createdAt: 'ayer' }] },
+  ])
+    assert.throws(() =>
+      parseCustomerPurchases({
+        items: [purchase],
+        total: 1,
+        page: 0,
+        size: 10,
+        ...invalid,
+      }),
+    )
+})
 test('carrito vacío y agregar producto', () => {
   assert.equal(cartTotal([]), 0)
   assert.equal(changeQuantity([], saleProduct, 2)[0]?.quantity, 2)

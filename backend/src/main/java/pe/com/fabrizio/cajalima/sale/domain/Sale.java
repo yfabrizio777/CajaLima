@@ -3,6 +3,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import pe.com.fabrizio.cajalima.customer.domain.Customer;
 @Entity @Table(name = "sales")
 public class Sale {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
@@ -12,10 +13,13 @@ public class Sale {
     @Enumerated(EnumType.STRING) @Column(name = "payment_method", nullable = false, length = 20) private PaymentMethod paymentMethod;
     @Column(name = "created_by", nullable = false) private Long createdBy;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "customer_id") private Customer customer;
     protected Sale() { }
-    public Sale(UUID requestId, String fingerprint, BigDecimal total, PaymentMethod paymentMethod, Long createdBy) {
+    public Sale(UUID requestId, String fingerprint, BigDecimal total, PaymentMethod paymentMethod, Long createdBy, Customer customer) {
         this.requestId = requestId; this.requestFingerprint = fingerprint; this.total = total;
         this.paymentMethod = paymentMethod; this.createdBy = createdBy; this.createdAt = Instant.now();
+        this.customer = customer;
     }
     public Long getId() { return id; }
     public String getRequestFingerprint() { return requestFingerprint; }
@@ -23,4 +27,5 @@ public class Sale {
     public PaymentMethod getPaymentMethod() { return paymentMethod; }
     public Long getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }
+    public Customer getCustomer() { return customer; }
 }

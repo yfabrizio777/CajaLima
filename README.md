@@ -153,7 +153,7 @@ El servidor calcula los importes y guarda venta, snapshots de productos, salida 
 
 En `/app/customers`, ADMIN y EMPLOYEE pueden registrar, buscar, consultar y editar datos básicos de clientes. Solo ADMIN puede desactivar o reactivar; no hay eliminación física. El único dato obligatorio es el nombre. Documento, teléfono, correo, dirección y nota son opcionales. Se admiten DNI, RUC, CE y otro documento, sin integraciones oficiales. La pareja tipo/número normalizada es única, incluso entre clientes inactivos; el correo se puede compartir.
 
-V4 crea `customers` sin cambiar V1–V3. El listado usa tabla en desktop y tarjetas en móvil. Todavía no se asocian clientes a ventas ni se incluyen créditos o campañas. Consulta [el contrato de clientes](docs/customers.md) y [la verificación](docs/verification.md).
+V4 crea `customers` sin cambiar V1–V3. El listado usa tabla en desktop y tarjetas en móvil. V5 permite asociar opcionalmente un cliente activo a una venta: el POS busca por nombre/documento y permite crear un cliente sin perder el carrito. Público general representa una venta sin cliente, sin crear una persona ficticia. El detalle del cliente muestra su historial real de compras; desactivarlo conserva las ventas anteriores. No se incluyen créditos ni campañas. Consulta [el contrato de clientes](docs/customers.md), [ventas](docs/sales.md) y [la verificación](docs/verification.md).
 
 ## Detener el proyecto
 
@@ -182,6 +182,8 @@ Los datos permanecen en el volumen de Docker. Evita `docker compose down -v`, po
 - [x] Frontend base
 - [x] Login y configuración inicial
 - [x] Clientes
+- [x] Asociación cliente ↔ venta
+- [ ] Fiados
 - [ ] Reportes
 - [ ] Gastos y compras
 - [ ] Integraciones futuras

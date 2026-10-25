@@ -30,7 +30,7 @@ export function useSalesApi() {
           if (error instanceof ApiError && [404, 409].includes(error.status))
             throw new ApiError(
               error.status,
-              'Un producto o su stock cambió. Revisa las cantidades antes de registrar la venta.',
+              'El cliente seleccionado no está disponible o un producto cambió. Revisa el cliente y las cantidades antes de registrar la venta.',
             )
           throw error
         }

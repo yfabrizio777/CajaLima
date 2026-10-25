@@ -4,6 +4,7 @@ import { ApiError } from '../../lib/http'
 import type { RequestOptions } from '../../lib/http'
 import { parseCustomer, parseCustomers } from './types'
 import type { CustomerInput } from './types'
+import { parseCustomerPurchases } from './purchases'
 export function useCustomersApi() {
   const { authenticatedRequest } = useAuth()
   return useMemo(() => {
@@ -27,6 +28,27 @@ export function useCustomersApi() {
           await call(
             '?' +
               new URLSearchParams({ search, page: String(page), size: '20' }),
+            { signal },
+          ),
+        ),
+      active: async (search: string, page: number, signal?: AbortSignal) =>
+        parseCustomers(
+          await call(
+            '?' +
+              new URLSearchParams({
+                search,
+                page: String(page),
+                size: '20',
+                active: 'true',
+              }),
+            { signal },
+          ),
+        ),
+      purchases: async (id: number, page: number, signal?: AbortSignal) =>
+        parseCustomerPurchases(
+          await call(
+            `/${id}/sales?` +
+              new URLSearchParams({ page: String(page), size: '10' }),
             { signal },
           ),
         ),

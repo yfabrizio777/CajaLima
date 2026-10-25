@@ -46,7 +46,7 @@ class SaleIntegrationTests {
     }
     @BeforeEach void fixtures() {
         jdbc.update("delete from inventory_movements"); jdbc.update("delete from sale_items"); jdbc.update("delete from sales");
-        jdbc.update("delete from products"); jdbc.update("delete from users");
+        jdbc.update("delete from products"); jdbc.update("delete from customers"); jdbc.update("delete from users");
         User owner = users.saveAndFlush(new User("Prueba", UUID.randomUUID() + "@example.invalid", "unused-test-hash", UserRole.ADMIN));
         actor = owner.getId(); admin = jwt.issue(owner).token();
         employee = jwt.issue(users.saveAndFlush(new User("Colaborador", UUID.randomUUID() + "@example.invalid", "unused-test-hash", UserRole.EMPLOYEE))).token();
@@ -60,6 +60,122 @@ class SaleIntegrationTests {
     }
     private int stock() { return jdbc.queryForObject("select stock from products where id=?", Integer.class, product); }
     private int count(String table) { return jdbc.queryForObject("select count(*) from " + table, Integer.class); }
+    private long customer(String name) throws Exception {
+        var result = mvc.perform(post("/api/customers").header("Authorization", "Bearer " + admin)
+                .contentType("application/json").content(json.writeValueAsString(Map.of("name", name))))
+                .andExpect(status().isCreated()).andReturn();
+        return json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+    }
+    private Map<String, Object> associated(long id, int quantity) {
+        var request = body(quantity); request.put("customerId", id); return request;
+    }
+    @Test void generalPublicSaleExplicitlyReturnsNullCustomer() throws Exception {
+        var result = sell(admin, body(1)).andExpect(status().isCreated()).andReturn();
+        var response = json.readTree(result.getResponse().getContentAsString());
+        assertTrue(response.has("customer")); assertTrue(response.get("customer").isNull());
+    }
+    @Test void activeCustomerCanBeSelectedByBothRolesAndResponseIsMinimal() throws Exception {
+        long id = customer("María Quispe");
+        for (String token : List.of(admin, employee)) {
+            var result = sell(token, associated(id, 1)).andExpect(status().isCreated())
+                    .andExpect(jsonPath("customer.id").value(id)).andExpect(jsonPath("customer.name").value("María Quispe"))
+                    .andExpect(jsonPath("customer.phone").doesNotExist()).andExpect(jsonPath("customer.notes").doesNotExist()).andReturn();
+            long saleId = json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+            mvc.perform(get("/api/sales/" + saleId).header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("customer.id").value(id));
+        }
+    }
+    @Test void missingAndInactiveCustomersCannotConsumeStock() throws Exception {
+        sell(admin, associated(999999999, 1)).andExpect(status().isNotFound());
+        long id = customer("Inactiva"); jdbc.update("update customers set active=false where id=?", id);
+        sell(employee, associated(id, 1)).andExpect(status().isConflict()).andExpect(jsonPath("message").value("El cliente seleccionado no está activo."));
+        assertEquals(24, stock()); assertEquals(0, count("sales")); assertEquals(0, count("inventory_movements"));
+    }
+    @Test void manipulatedCustomerFieldsAreRejected() throws Exception {
+        for (Object id : List.of(-1, 0, 1.5, "invalid")) {
+            var request = body(1); request.put("customerId", id); sell(admin, request).andExpect(status().isBadRequest());
+        }
+        var request = body(1); request.put("customer", Map.of("id", 1, "active", true));
+        sell(employee, request).andExpect(status().isBadRequest());
+    }
+    @Test void retryKeepsCustomerEvenAfterDeactivationAndDifferentCustomerConflicts() throws Exception {
+        long first = customer("María"); long second = customer("Juan");
+        var request = associated(first, 2);
+        var original = sell(admin, request).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        jdbc.update("update customers set active=false where id=?", first);
+        var retry = sell(admin, request).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        assertEquals(json.readTree(original).get("id"), json.readTree(retry).get("id"));
+        request.put("customerId", second); sell(admin, request).andExpect(status().isConflict());
+        request.remove("customerId"); sell(admin, request).andExpect(status().isConflict());
+        assertEquals(22, stock()); assertEquals(1, count("sales"));
+    }
+    @Test void legacyNullCustomerFingerprintRemainsReplayable() throws Exception {
+        var request = body(1);
+        String canonical = "YAPE:" + product + "=1";
+        String fingerprint = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        long id = jdbc.queryForObject("insert into sales(request_id,request_fingerprint,total,payment_method,created_by,created_at) values (?::uuid,?,3.50,'YAPE',?,now()) returning id",
+                Long.class, request.get("requestId"), fingerprint, actor);
+        sell(admin, request).andExpect(status().isCreated()).andExpect(jsonPath("id").value(id)).andExpect(jsonPath("customer").isEmpty());
+        assertEquals(24, stock()); assertEquals(1, count("sales"));
+    }
+    @Test void customerHistoryIsPaginatedAndExcludesGeneralPublicAndOtherCustomers() throws Exception {
+        long first = customer("María"); long second = customer("Juan");
+        sell(admin, associated(first, 1)).andExpect(status().isCreated());
+        var latest = sell(employee, associated(first, 2)).andExpect(status().isCreated()).andReturn();
+        long latestId = json.readTree(latest.getResponse().getContentAsString()).get("id").asLong();
+        sell(admin, body(1)).andExpect(status().isCreated()); sell(admin, associated(second, 1)).andExpect(status().isCreated());
+        jdbc.update("update customers set active=false where id=?", first);
+        for (String token : List.of(admin, employee)) {
+            mvc.perform(get("/api/customers/" + first + "/sales").param("size", "1").header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("total").value(2)).andExpect(jsonPath("items[0].id").value(latestId))
+                    .andExpect(jsonPath("items[0].total").value(7)).andExpect(jsonPath("items[0].paymentMethod").value("YAPE"))
+                    .andExpect(jsonPath("items[0].items").doesNotExist()).andExpect(jsonPath("items[0].createdBy").doesNotExist());
+            mvc.perform(get("/api/customers/" + first + "/sales").param("page", "1").param("size", "1").header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("items.length()").value(1));
+        }
+    }
+    @Test void historyValidatesCustomerSessionAndPaginationAndCanBeEmpty() throws Exception {
+        long id = customer("Sin compras");
+        mvc.perform(get("/api/customers/" + id + "/sales")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/customers/" + id + "/sales").header("Authorization", "Bearer " + employee))
+                .andExpect(status().isOk()).andExpect(jsonPath("total").value(0)).andExpect(jsonPath("items").isEmpty());
+        mvc.perform(get("/api/customers/999999999/sales").header("Authorization", "Bearer " + admin)).andExpect(status().isNotFound());
+        for (var entry : Map.of("page", "-1", "size", "101").entrySet())
+            mvc.perform(get("/api/customers/" + id + "/sales").param(entry.getKey(), entry.getValue()).header("Authorization", "Bearer " + admin))
+                    .andExpect(status().isBadRequest());
+    }
+    @Test void associatedSaleWithInsufficientStockRollsBack() throws Exception {
+        long id = customer("María"); sell(admin, associated(id, 25)).andExpect(status().isConflict());
+        assertEquals(24, stock()); assertEquals(0, count("sales")); assertEquals(0, count("sale_items")); assertEquals(0, count("inventory_movements"));
+    }
+    @Test void associatedSalesForDifferentCustomersCannotOversellLastUnit() throws Exception {
+        long a = customer("María"); long b = customer("Juan"); jdbc.update("update products set stock=1 where id=?", product);
+        var ready = new CountDownLatch(2); var start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var futures = new ArrayList<Future<Integer>>();
+            for (long id : List.of(a, b)) futures.add(pool.submit(() -> {
+                ready.countDown(); assertTrue(start.await(10, TimeUnit.SECONDS)); return sell(admin, associated(id, 1)).andReturn().getResponse().getStatus();
+            }));
+            assertTrue(ready.await(10, TimeUnit.SECONDS)); start.countDown();
+            assertEquals(List.of(201, 409), java.util.stream.Stream.of(futures.get(0).get(20, TimeUnit.SECONDS), futures.get(1).get(20, TimeUnit.SECONDS)).sorted().toList());
+        }
+        assertEquals(0, stock()); assertEquals(1, count("sales"));
+    }
+    @Test void simultaneousRetryWithSameCustomerReturnsOneSale() throws Exception {
+        var request = associated(customer("María"), 2);
+        var ready = new CountDownLatch(2); var start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            Callable<Long> task = () -> {
+                ready.countDown(); assertTrue(start.await(10, TimeUnit.SECONDS));
+                var result = sell(admin, request).andExpect(status().isCreated()).andReturn();
+                return json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+            };
+            var a = pool.submit(task); var b = pool.submit(task); assertTrue(ready.await(10, TimeUnit.SECONDS)); start.countDown();
+            assertEquals(a.get(20, TimeUnit.SECONDS), b.get(20, TimeUnit.SECONDS));
+        }
+        assertEquals(22, stock()); assertEquals(1, count("sales"));
+    }
     @Test void adminSaleRecalculatesAndDecrements() throws Exception {
         sell(admin, body(2)).andExpect(status().isCreated()).andExpect(jsonPath("total").value(7.0)).andExpect(jsonPath("items[0].unitPrice").value(3.5)).andExpect(jsonPath("createdBy").value(actor));
         assertEquals(22, stock()); assertEquals(1, count("sales")); assertEquals(1, count("sale_items"));

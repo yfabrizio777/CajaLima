@@ -103,6 +103,15 @@ class CustomerIntegrationTests {
     @Test void sharedEmailAndMissingDocumentsAreAllowed() throws Exception {
         var body = basic(); body.put("email", "familia@example.com"); create(body); create(body);
     }
+    @Test void activeSearchForPosExcludesInactiveWithoutChangingDefaultList() throws Exception {
+        String name = "Selector " + UUID.randomUUID();
+        var body = basic(); body.put("name", name); long first = create(body); create(body);
+        send(patch("/api/customers/" + first + "/status"), admin, Map.of("active", false)).andExpect(status().isOk());
+        send(get("/api/customers").param("search", name).param("active", "true"), employee, null)
+                .andExpect(status().isOk()).andExpect(jsonPath("total").value(1)).andExpect(jsonPath("items[0].active").value(true));
+        send(get("/api/customers").param("search", name), employee, null).andExpect(status().isOk()).andExpect(jsonPath("total").value(2));
+        send(get("/api/customers").param("active", "invalid"), employee, null).andExpect(status().isBadRequest());
+    }
     @Test void validatesDocumentFormatsWithoutOfficialLookup() throws Exception {
         create(documented("DNI", "12345678")); create(documented("RUC", "20123456789"));
         for (var body : List.of(documented("DNI", "1234567"), documented("RUC", "ABC"), documented("CE", "<>"), documented("OTHER", "x".repeat(33)), documented("PASSPORT", "123")))

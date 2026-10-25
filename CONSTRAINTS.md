@@ -43,3 +43,13 @@ Comandos frontend desde `frontend/`; pruebas de navegador con Playwright CLI y a
 - Campos y consultas acotados, rechazo de campos internos, búsqueda literal paginada y respuestas validadas.
 - Pruebas y navegador en esquemas exclusivos; no aplicar V4 al esquema principal durante la verificación.
 - Tabla desktop, tarjetas móviles y axe sin infracciones en los tamaños del proyecto. Hasta dos capturas nuevas.
+
+## Asociación cliente y venta
+
+- V5 aditiva: customer_id nullable y FK sin cascadas; V1–V4 intactas y ventas anteriores sin relación inventada.
+- Selección opcional para ambos roles; cliente activo y existente validado en backend. Historial compartido del negocio, paginado y consultable también para inactivos.
+- Incluir cliente en fingerprint de solicitudes asociadas; conservar huellas anteriores para null y actor/reintentos/rollback/bloqueos de stock.
+- Customer no importa Sale; consulta del historial propiedad del módulo Sale. Respuesta de venta sin datos de contacto/notas del cliente.
+- Reutilizar CustomerForm en POS sin perder carrito; cliente y referencia bloqueados ante respuesta incierta.
+- Probar venta asociada, Público general, historial, permisos, concurrencia e idempotencia; Playwright/axe con esquemas temporales y hasta dos capturas nuevas.
+- Sin cambios de dependencias ni avances a Fiados; Strix conserva su gate previo al despliegue público.

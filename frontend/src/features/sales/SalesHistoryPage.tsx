@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { Dialog } from '../../components/ui/Dialog'
 import { formatDate, formatMoney } from '../../lib/locale'
 import { SaleDetail } from './SaleDetail'
@@ -8,6 +8,13 @@ import { payments } from './types'
 import type { Sale, SalePage } from './types'
 export function SalesHistoryPage() {
   const api = useSalesApi()
+  const [params, setParams] = useSearchParams()
+  const selectedSale = params.get('sale')
+  const invalidSelectedSale =
+    selectedSale !== null &&
+    (!/^[0-9]+$/.test(selectedSale) ||
+      !Number.isSafeInteger(Number(selectedSale)) ||
+      Number(selectedSale) < 1)
   const [date, setDate] = useState('')
   const [page, setPage] = useState(0)
   const [data, setData] = useState<SalePage | null>(null)
@@ -35,12 +42,31 @@ export function SalesHistoryPage() {
       })
     return () => controller.abort()
   }, [api, date, page])
-  async function open(id: number) {
-    try {
-      setDetail(await api.detail(id))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No pudimos cargar el detalle.')
-    }
+  useEffect(() => {
+    if (!selectedSale || invalidSelectedSale) return
+    const id = Number(selectedSale)
+    const controller = new AbortController()
+    api
+      .detail(id, controller.signal)
+      .then((sale) => {
+        if (!controller.signal.aborted) setDetail(sale)
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setError(
+            e instanceof Error ? e.message : 'No pudimos cargar el detalle.',
+          )
+      })
+    return () => controller.abort()
+  }, [api, selectedSale, invalidSelectedSale])
+  function open(id: number) {
+    setParams({ sale: String(id) })
+  }
+  function close() {
+    setDetail(null)
+    const next = new URLSearchParams(params)
+    next.delete('sale')
+    setParams(next, { replace: true })
   }
   return (
     <>
@@ -77,9 +103,9 @@ export function SalesHistoryPage() {
           Todas las fechas
         </button>
       </div>
-      {error && (
+      {(error || invalidSelectedSale) && (
         <p className="form-alert" role="alert">
-          {error}
+          {invalidSelectedSale ? 'Revisa la venta solicitada.' : error}
         </p>
       )}
       {loading ? (
@@ -135,10 +161,7 @@ export function SalesHistoryPage() {
         )
       )}
       {detail && (
-        <Dialog
-          title={'Detalle de venta #' + detail.id}
-          onClose={() => setDetail(null)}
-        >
+        <Dialog title={'Detalle de venta #' + detail.id} onClose={close}>
           <SaleDetail sale={detail} />
         </Dialog>
       )}

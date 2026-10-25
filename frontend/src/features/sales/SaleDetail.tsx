@@ -7,6 +7,9 @@ export function SaleDetail({ sale }: { sale: Sale }) {
       <p>
         Venta #{sale.id} · {formatDate(new Date(sale.createdAt))}
       </p>
+      <p>
+        Cliente: <strong>{sale.customer?.name ?? 'Público general'}</strong>
+      </p>
       <ul>
         {sale.items.map((item) => (
           <li key={item.productId}>

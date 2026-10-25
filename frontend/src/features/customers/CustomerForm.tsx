@@ -15,7 +15,7 @@ export function CustomerForm({
 }: {
   customer?: Customer
   onClose: () => void
-  onSaved: () => void
+  onSaved: (customer: Customer) => void
 }) {
   const api = useCustomersApi()
   const [values, setValues] = useState<CustomerValues>({
@@ -53,8 +53,8 @@ export function CustomerForm({
     }
     setBusy(true)
     try {
-      await api.save(customer?.id, customerBody(values))
-      onSaved()
+      const saved = await api.save(customer?.id, customerBody(values))
+      onSaved(saved)
     } catch (error) {
       setMessage(
         error instanceof Error
